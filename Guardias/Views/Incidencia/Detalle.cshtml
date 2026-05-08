@@ -1,0 +1,82 @@
+@model Guardias.Models.Incidencia
+@{
+    ViewData["ActiveTab"] = "incidencias";
+}
+
+<div style="margin-bottom:12px;">
+    <a href="/Incidencia" style="color:var(--blue);text-decoration:none;font-size:15px;">
+        <i class="bi bi-chevron-left"></i> Incidencias
+    </a>
+</div>
+
+<div class="page-header">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <h2>Incidencia #@Model.Id</h2>
+        @switch (Model.Estado)
+        {
+            case Guardias.Models.EstadoIncidencia.Abierta:
+                <span class="badge-ios badge-open">Abierta</span>
+                break;
+            case Guardias.Models.EstadoIncidencia.EnProceso:
+                <span class="badge-ios badge-process">En proceso</span>
+                break;
+            case Guardias.Models.EstadoIncidencia.Cerrada:
+                <span class="badge-ios badge-closed">Cerrada</span>
+                break;
+        }
+    </div>
+    <p>Registrada el @Model.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</p>
+</div>
+
+<div class="detail-section">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+            <div class="detail-label">Guardia</div>
+            <div class="detail-value">@Model.Ronda?.Guardia?.Nombre</div>
+        </div>
+        <div>
+            <div class="detail-label">Edificio</div>
+            <div class="detail-value">@Model.Ronda?.Edificio?.Nombre</div>
+        </div>
+        <div>
+            <div class="detail-label">Severidad</div>
+            <div class="detail-value">
+                @switch (Model.Severidad)
+                {
+                    case Guardias.Models.SeveridadIncidencia.Grave:
+                        <span class="badge-ios badge-grave">Grave</span>
+                        break;
+                    case Guardias.Models.SeveridadIncidencia.Moderada:
+                        <span class="badge-ios badge-process">Moderada</span>
+                        break;
+                    default:
+                        <span class="badge-ios" style="background:#f5f5f5;color:var(--text2);">Leve</span>
+                        break;
+                }
+            </div>
+        </div>
+        <div>
+            <div class="detail-label">Ronda</div>
+            <div class="detail-value">
+                <a href="/Ronda/Detalle/@Model.RondaId" style="color:var(--blue);">Ver ronda #@Model.RondaId</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="detail-section">
+    <div class="detail-label" style="margin-bottom:8px;">Descripción</div>
+    <p style="font-size:15px;">@Model.Descripcion</p>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.NotasCierre))
+{
+    <div class="detail-section" style="background:#E8F5E9;">
+        <div class="detail-label" style="margin-bottom:8px;">Notas de cierre</div>
+        <p style="font-size:15px;color:#1B5E20;">@Model.NotasCierre</p>
+        @if (Model.FechaCierre.HasValue)
+        {
+            <div style="font-size:13px;color:#388E3C;margin-top:6px;">Cerrada el @Model.FechaCierre.Value.ToString("dd/MM/yyyy HH:mm")</div>
+        }
+    </div>
+}

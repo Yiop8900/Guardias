@@ -1,0 +1,85 @@
+@model List<Guardias.Models.Incidencia>
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Incidencias";
+    ViewData["AdminSection"] = "incidencias";
+    ViewData["PageSub"] = "Gestiona el estado y severidad de las incidencias";
+}
+
+<div class="admin-card" style="padding:0;overflow:hidden;">
+    @if (!Model.Any())
+    {
+        <div style="padding:40px;text-align:center;color:var(--text2);">
+            <i class="bi bi-exclamation-triangle" style="font-size:40px;display:block;margin-bottom:10px;"></i>
+            No hay incidencias registradas.
+        </div>
+    }
+    else
+    {
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Guardia</th>
+                    <th>Descripción</th>
+                    <th>Severidad</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var inc in Model)
+                {
+                    <tr>
+                        <td style="font-weight:500;">@inc.Ronda?.Guardia?.Nombre</td>
+                        <td style="max-width:280px;">
+                            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px;">
+                                @inc.Descripcion
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(inc.NotasCierre))
+                            {
+                                <div style="font-size:12px;color:var(--green);margin-top:2px;">
+                                    <i class="bi bi-check2"></i> @inc.NotasCierre
+                                </div>
+                            }
+                        </td>
+                        <td>
+                            @switch (inc.Severidad)
+                            {
+                                case Guardias.Models.SeveridadIncidencia.Grave:
+                                    <span class="badge-ios badge-grave">Grave</span>
+                                    break;
+                                case Guardias.Models.SeveridadIncidencia.Moderada:
+                                    <span class="badge-ios badge-process">Moderada</span>
+                                    break;
+                                default:
+                                    <span class="badge-ios" style="background:#f5f5f5;color:var(--text2);">Leve</span>
+                                    break;
+                            }
+                        </td>
+                        <td>
+                            @switch (inc.Estado)
+                            {
+                                case Guardias.Models.EstadoIncidencia.Abierta:
+                                    <span class="badge-ios badge-open">Abierta</span>
+                                    break;
+                                case Guardias.Models.EstadoIncidencia.EnProceso:
+                                    <span class="badge-ios badge-process">En proceso</span>
+                                    break;
+                                case Guardias.Models.EstadoIncidencia.Cerrada:
+                                    <span class="badge-ios badge-closed">Cerrada</span>
+                                    break;
+                            }
+                        </td>
+                        <td style="color:var(--text2);white-space:nowrap;">@inc.FechaCreacion.ToString("dd/MM/yy HH:mm")</td>
+                        <td>
+                            <a href="/Admin/GestionarIncidencia/@inc.Id" class="btn-admin btn-admin-secondary" style="padding:6px 12px;font-size:13px;">
+                                <i class="bi bi-gear"></i> Gestionar
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>

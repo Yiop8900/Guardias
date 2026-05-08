@@ -1,0 +1,71 @@
+@model List<Guardias.Models.Edificio>
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Edificios";
+    ViewData["AdminSection"] = "edificios";
+    ViewData["PageSub"] = "Administra las ubicaciones de rondas";
+}
+
+<div style="margin-bottom:16px;display:flex;justify-content:flex-end;">
+    <a href="/Admin/CrearEdificio" class="btn-admin btn-admin-primary">
+        <i class="bi bi-plus-lg"></i> Nuevo edificio
+    </a>
+</div>
+
+<div class="admin-card" style="padding:0;overflow:hidden;">
+    @if (!Model.Any())
+    {
+        <div style="padding:40px;text-align:center;color:var(--text2);">
+            <i class="bi bi-building" style="font-size:40px;display:block;margin-bottom:10px;"></i>
+            No hay edificios registrados. <a href="/Admin/CrearEdificio">Crear el primero</a>.
+        </div>
+    }
+    else
+    {
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var e in Model)
+                {
+                    <tr>
+                        <td style="font-weight:500;">@e.Nombre</td>
+                        <td style="color:var(--text2);">@(e.Descripcion ?? "—")</td>
+                        <td>
+                            @if (e.Activo)
+                            {
+                                <span class="badge-ios badge-done">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="badge-ios" style="background:#f5f5f5;color:var(--text2);">Inactivo</span>
+                            }
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                <a href="/Admin/EditarEdificio/@e.Id" class="btn-admin btn-admin-secondary" style="padding:6px 12px;font-size:13px;">
+                                    <i class="bi bi-pencil"></i> Editar
+                                </a>
+                                @if (e.Activo)
+                                {
+                                    <form method="post" asp-controller="Admin" asp-action="EliminarEdificio" asp-route-id="@e.Id" style="display:inline;" onsubmit="return confirm('¿Desactivar @e.Nombre?')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn-admin btn-admin-danger" style="padding:6px 12px;font-size:13px;">
+                                            <i class="bi bi-x-circle"></i> Desactivar
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>

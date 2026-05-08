@@ -1,0 +1,73 @@
+@model Guardias.Models.Ronda
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Firmar Ronda";
+    ViewData["AdminSection"] = "rondas";
+}
+
+<div style="margin-bottom:16px;">
+    <a href="/Admin/Rondas" class="btn-admin btn-admin-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<!-- Round summary -->
+<div class="admin-card" style="max-width:600px;margin-bottom:16px;">
+    <div style="font-weight:600;font-size:16px;margin-bottom:14px;">Ronda #@Model.Id</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:14px;">
+        <div><span style="color:var(--text2);">Guardia:</span> <strong>@Model.Guardia?.Nombre</strong></div>
+        <div><span style="color:var(--text2);">Edificio:</span> <strong>@Model.Edificio?.Nombre</strong></div>
+        <div><span style="color:var(--text2);">Fecha:</span> <strong>@Model.FechaHora.ToString("dd/MM/yyyy HH:mm")</strong></div>
+        <div><span style="color:var(--text2);">Fotos:</span> <strong>@Model.Fotos.Count</strong></div>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.ReporteIncidencias))
+    {
+        <div style="margin-top:12px;padding:10px;background:var(--bg);border-radius:8px;font-size:14px;">
+            <strong>Reporte:</strong> @Model.ReporteIncidencias
+        </div>
+    }
+    @if (Model.Fotos.Any())
+    {
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px;">
+            @foreach (var f in Model.Fotos.Take(4))
+            {
+                <div style="aspect-ratio:1;border-radius:8px;overflow:hidden;">
+                    <img src="@f.RutaFoto" style="width:100%;height:100%;object-fit:cover;" alt="foto" />
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Sign form -->
+<div class="admin-card" style="max-width:600px;">
+    <div style="font-weight:600;font-size:16px;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+        <i class="bi bi-pen" style="color:var(--blue);"></i> Firmar ronda
+    </div>
+
+    @if (ViewContext.ModelState.ErrorCount > 0)
+    {
+        <div class="alert-ios alert-error" style="margin-bottom:14px;">
+            @foreach (var entry in ViewContext.ModelState.Values)
+            {
+                foreach (var e in entry.Errors)
+                {
+                    <div>@e.ErrorMessage</div>
+                }
+            }
+        </div>
+    }
+
+    <form method="post" asp-controller="Admin" asp-action="FirmarRonda" asp-route-id="@Model.Id">
+        @Html.AntiForgeryToken()
+        <div class="form-admin-group">
+            <label class="form-admin-label">Nombre del supervisor que firma</label>
+            <input type="text" name="firmadoPor" class="form-admin-control"
+                   placeholder="Ej: Carlos López" required />
+        </div>
+        <div style="display:flex;gap:10px;margin-top:8px;">
+            <button type="submit" class="btn-admin btn-admin-primary" style="padding:10px 24px;">
+                <i class="bi bi-pen"></i> Confirmar firma
+            </button>
+            <a href="/Admin/Rondas" class="btn-admin btn-admin-secondary" style="padding:10px 20px;">Cancelar</a>
+        </div>
+    </form>
+</div>

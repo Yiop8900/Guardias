@@ -1,0 +1,77 @@
+@{
+    ViewData["ActiveTab"] = "pendientes";
+    var rondasSinFirmar = ViewBag.RondasSinFirmar as List<Guardias.Models.Ronda> ?? new List<Guardias.Models.Ronda>();
+    var incidenciasGraves = ViewBag.IncidenciasGraves as List<Guardias.Models.Incidencia> ?? new List<Guardias.Models.Incidencia>();
+    int total = ViewBag.Total;
+}
+
+<div class="page-header">
+    <h2>Pendientes de firma</h2>
+    <p>@rondasSinFirmar.Count ronda(s) · @incidenciasGraves.Count incidencia(s) grave(s)</p>
+</div>
+
+<!-- Rondas sin firma -->
+<div class="pending-section">
+    <div class="pending-section-title">
+        <i class="bi bi-pencil-square" style="color:var(--blue);"></i>
+        Rondas sin firma de supervisor
+    </div>
+    @if (!rondasSinFirmar.Any())
+    {
+        <div class="all-good">
+            <i class="bi bi-check-circle-fill"></i> Todo firmado — sin pendientes
+        </div>
+    }
+    else
+    {
+        foreach (var r in rondasSinFirmar)
+        {
+            <div class="pending-item-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                    <div>
+                        <div style="font-weight:600;font-size:15px;">@r.Guardia?.Nombre</div>
+                        <div style="font-size:13px;color:var(--text2);margin-top:2px;">
+                            <i class="bi bi-building me-1"></i>@r.Edificio?.Nombre
+                            &nbsp;·&nbsp;
+                            <i class="bi bi-clock me-1"></i>@r.FechaHora.ToString("dd/MM/yyyy HH:mm")
+                        </div>
+                    </div>
+                    <a href="/Ronda/Detalle/@r.Id" style="color:var(--blue);font-size:22px;"><i class="bi bi-chevron-right"></i></a>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<!-- Incidencias graves sin cerrar -->
+<div class="pending-section">
+    <div class="pending-section-title">
+        <i class="bi bi-exclamation-triangle-fill" style="color:var(--red);"></i>
+        Incidencias graves sin cerrar
+    </div>
+    @if (!incidenciasGraves.Any())
+    {
+        <div class="all-good">
+            <i class="bi bi-check-circle-fill"></i> Sin incidencias graves pendientes
+        </div>
+    }
+    else
+    {
+        foreach (var inc in incidenciasGraves)
+        {
+            <div class="pending-item-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                    <div>
+                        <div style="font-weight:600;font-size:15px;color:var(--red);">
+                            <i class="bi bi-exclamation-triangle me-1"></i>@inc.Descripcion
+                        </div>
+                        <div style="font-size:13px;color:var(--text2);margin-top:2px;">
+                            @inc.Ronda?.Guardia?.Nombre — @inc.FechaCreacion.ToString("dd/MM/yyyy HH:mm")
+                        </div>
+                    </div>
+                    <a href="/Incidencia/Detalle/@inc.Id" style="color:var(--red);font-size:22px;"><i class="bi bi-chevron-right"></i></a>
+                </div>
+            </div>
+        }
+    }
+</div>

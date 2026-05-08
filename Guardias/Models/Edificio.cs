@@ -1,0 +1,30 @@
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+
+namespace Guardias.Models;
+
+public class Edificio
+{
+    public int Id { get; set; }
+
+    [Required(ErrorMessage = "El nombre es obligatorio")]
+    [StringLength(100)]
+    [Display(Name = "Nombre del edificio")]
+    public string Nombre { get; set; } = string.Empty;
+
+    [StringLength(300)]
+    [Display(Name = "Descripción")]
+    public string? Descripcion { get; set; }
+
+    [Display(Name = "Activo")]
+    public bool Activo { get; set; } = true;
+
+    [JsonIgnore]
+    public ICollection<Guardia> Guardias { get; set; } = new List<Guardia>();
+
+    [JsonIgnore]
+    public ICollection<Ronda> Rondas { get; set; } = new List<Ronda>();
+
+    [JsonIgnore]
+    public ICollection<Tarea> Tareas { get; set; } = new List<Tarea>();
+}

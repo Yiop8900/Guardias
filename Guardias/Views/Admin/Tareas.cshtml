@@ -1,0 +1,99 @@
+@model List<Guardias.Models.Tarea>
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Tareas Programadas";
+    ViewData["AdminSection"] = "tareas";
+    ViewData["PageSub"] = "Programa tareas por turno y hora";
+}
+
+<div style="margin-bottom:16px;display:flex;justify-content:flex-end;">
+    <a href="/Admin/CrearTarea" class="btn-admin btn-admin-primary">
+        <i class="bi bi-plus-lg"></i> Nueva tarea
+    </a>
+</div>
+
+<div class="admin-card" style="padding:0;overflow:hidden;">
+    @if (!Model.Any())
+    {
+        <div style="padding:40px;text-align:center;color:var(--text2);">
+            <i class="bi bi-list-task" style="font-size:40px;display:block;margin-bottom:10px;"></i>
+            No hay tareas programadas. <a href="/Admin/CrearTarea">Crear la primera</a>.
+        </div>
+    }
+    else
+    {
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Título</th>
+                    <th>Hora</th>
+                    <th>Turno</th>
+                    <th>Guardia</th>
+                    <th>Edificio</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in Model)
+                {
+                    <tr>
+                        <td>
+                            <div style="font-weight:500;">@t.Titulo</div>
+                            @if (!string.IsNullOrWhiteSpace(t.Descripcion))
+                            {
+                                <div style="font-size:12px;color:var(--text2);">@t.Descripcion</div>
+                            }
+                        </td>
+                        <td>
+                            @if (t.HoraProgramada.HasValue)
+                            {
+                                <span style="font-weight:500;">@t.HoraProgramada.Value.ToString("HH:mm")</span>
+                            }
+                            else
+                            {
+                                <span style="color:var(--text2);">—</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge-ios @(t.Turno == Guardias.Models.Turno.Manana ? "badge-done" : t.Turno == Guardias.Models.Turno.Tarde ? "badge-process" : t.Turno == Guardias.Models.Turno.Noche ? "badge-running" : "")">
+                                @(t.Turno == Guardias.Models.Turno.Manana ? "Mañana" :
+                                  t.Turno == Guardias.Models.Turno.Tarde ? "Tarde" :
+                                  t.Turno == Guardias.Models.Turno.Noche ? "Noche" : "Todos")
+                            </span>
+                        </td>
+                        <td style="color:var(--text2);">@(t.Guardia?.Nombre ?? "Todos")</td>
+                        <td style="color:var(--text2);">@(t.Edificio?.Nombre ?? "—")</td>
+                        <td>
+                            @switch (t.Estado)
+                            {
+                                case Guardias.Models.EstadoTarea.Pendiente:
+                                    <span class="badge-ios badge-open">Pendiente</span>
+                                    break;
+                                case Guardias.Models.EstadoTarea.EnProceso:
+                                    <span class="badge-ios badge-process">En proceso</span>
+                                    break;
+                                case Guardias.Models.EstadoTarea.Completada:
+                                    <span class="badge-ios badge-done">Completada</span>
+                                    break;
+                            }
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                <a href="/Admin/EditarTarea/@t.Id" class="btn-admin btn-admin-secondary" style="padding:6px 12px;font-size:13px;">
+                                    <i class="bi bi-pencil"></i> Editar
+                                </a>
+                                <form method="post" asp-controller="Admin" asp-action="EliminarTarea" asp-route-id="@t.Id" style="display:inline;" onsubmit="return confirm('¿Eliminar esta tarea?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn-admin btn-admin-danger" style="padding:6px 12px;font-size:13px;">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>

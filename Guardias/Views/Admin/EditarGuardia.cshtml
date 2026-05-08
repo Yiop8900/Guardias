@@ -1,0 +1,55 @@
+@model Guardias.Models.Guardia
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Editar Guardia";
+    ViewData["AdminSection"] = "guardias";
+}
+
+<div style="margin-bottom:16px;">
+    <a href="/Admin/Guardias" class="btn-admin btn-admin-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<div class="admin-card" style="max-width:560px;">
+    <form method="post" asp-controller="Admin" asp-action="EditarGuardia" asp-route-id="@Model.Id">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <div asp-validation-summary="ModelOnly" class="alert-ios alert-error mb-3"></div>
+
+        <div class="form-admin-group">
+            <label asp-for="Nombre" class="form-admin-label"></label>
+            <input asp-for="Nombre" class="form-admin-control" />
+            <span asp-validation-for="Nombre" style="color:var(--red);font-size:13px;"></span>
+        </div>
+
+        <div class="form-admin-group">
+            <label asp-for="Cargo" class="form-admin-label"></label>
+            <input asp-for="Cargo" class="form-admin-control" />
+        </div>
+
+        <div class="form-admin-group">
+            <label asp-for="Turno" class="form-admin-label"></label>
+            <select asp-for="Turno" asp-items="Html.GetEnumSelectList<Guardias.Models.Turno>()" class="form-admin-control"></select>
+            <span asp-validation-for="Turno" style="color:var(--red);font-size:13px;"></span>
+        </div>
+
+        <div class="form-admin-group">
+            <label asp-for="EdificioId" class="form-admin-label"></label>
+            <select asp-for="EdificioId" asp-items="ViewBag.Edificios" class="form-admin-control"></select>
+            <span asp-validation-for="EdificioId" style="color:var(--red);font-size:13px;"></span>
+        </div>
+
+        <div class="form-admin-group">
+            <label class="form-admin-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input asp-for="Activo" type="checkbox" style="width:18px;height:18px;" />
+                <span>Guardia activo</span>
+            </label>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px;">
+            <button type="submit" class="btn-admin btn-admin-primary" style="padding:10px 24px;">
+                <i class="bi bi-check-lg"></i> Guardar cambios
+            </button>
+            <a href="/Admin/Guardias" class="btn-admin btn-admin-secondary" style="padding:10px 20px;">Cancelar</a>
+        </div>
+    </form>
+</div>

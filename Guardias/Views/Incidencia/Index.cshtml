@@ -1,0 +1,78 @@
+@model List<Guardias.Models.Incidencia>
+@{
+    ViewData["ActiveTab"] = "incidencias";
+    var filtro = ViewBag.Filtro as string ?? "todas";
+    int total = ViewBag.TotalModeradasGraves;
+}
+
+<div class="page-header">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div>
+            <h2>Incidencias</h2>
+            <p>@total incidencia(s) moderadas y graves activas</p>
+        </div>
+        <button class="btn-pdf" onclick="window.print()">
+            <i class="bi bi-file-pdf"></i> PDF
+        </button>
+    </div>
+</div>
+
+<div class="filter-pills">
+    <a href="/Incidencia" class="pill @(filtro == "todas" ? "active" : "")">Todas</a>
+    <a href="/Incidencia?filtro=abiertas" class="pill @(filtro == "abiertas" ? "active" : "")">Abiertas</a>
+    <a href="/Incidencia?filtro=enproceso" class="pill @(filtro == "enproceso" ? "active" : "")">En proceso</a>
+    <a href="/Incidencia?filtro=cerradas" class="pill @(filtro == "cerradas" ? "active" : "")">Cerradas</a>
+    <a href="/Incidencia?filtro=graves" class="pill @(filtro == "graves" ? "active" : "")">Graves</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="empty-state">
+        <div class="empty-icon"><i class="bi bi-exclamation-triangle"></i></div>
+        <h3>Sin incidencias</h3>
+        <p>No hay incidencias en este filtro</p>
+    </div>
+}
+else
+{
+    foreach (var inc in Model)
+    {
+        <a href="/Incidencia/Detalle/@inc.Id" class="incident-card">
+            <div class="incident-top">
+                <div style="font-weight:600;font-size:15px;">
+                    @inc.Ronda?.Guardia?.Nombre ?? "—"
+                </div>
+                <div style="display:flex;gap:6px;flex-shrink:0;">
+                    @switch (inc.Severidad)
+                    {
+                        case Guardias.Models.SeveridadIncidencia.Grave:
+                            <span class="badge-ios badge-grave">Grave</span>
+                            break;
+                        case Guardias.Models.SeveridadIncidencia.Moderada:
+                            <span class="badge-ios badge-process">Moderada</span>
+                            break;
+                        default:
+                            <span class="badge-ios" style="background:#f5f5f5;color:var(--text2);">Leve</span>
+                            break;
+                    }
+                    @switch (inc.Estado)
+                    {
+                        case Guardias.Models.EstadoIncidencia.Abierta:
+                            <span class="badge-ios badge-open">Abierta</span>
+                            break;
+                        case Guardias.Models.EstadoIncidencia.EnProceso:
+                            <span class="badge-ios badge-process">En proceso</span>
+                            break;
+                        case Guardias.Models.EstadoIncidencia.Cerrada:
+                            <span class="badge-ios badge-closed">Cerrada</span>
+                            break;
+                    }
+                </div>
+            </div>
+            <div class="incident-desc">@inc.Descripcion</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:6px;">
+                <i class="bi bi-clock me-1"></i>@inc.FechaCreacion.ToString("dd/MM/yyyy HH:mm")
+            </div>
+        </a>
+    }
+}

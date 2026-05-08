@@ -1,0 +1,84 @@
+@model List<Guardias.Models.Tarea>
+@{
+    ViewData["ActiveTab"] = "tareas";
+    int pendientes = ViewBag.TotalPendientes;
+}
+
+<div class="page-header">
+    <h2>Tareas</h2>
+    <p>@pendientes tarea(s) pendiente(s)</p>
+</div>
+
+@if (pendientes > 0)
+{
+    <div class="pending-section">
+        <div class="section-header">
+            <span class="section-title"><i class="bi bi-clock-history me-2" style="color:var(--orange);"></i>Pendientes (@pendientes)</span>
+        </div>
+        <div style="background:#FFF8E1;border-radius:12px;padding:12px 16px;font-size:14px;color:#E65100;display:flex;align-items:center;gap:8px;">
+            <i class="bi bi-exclamation-circle-fill"></i> Tienes tareas pendientes por completar
+        </div>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="empty-state">
+        <div class="empty-icon"><i class="bi bi-check2-square"></i></div>
+        <h3>Sin tareas</h3>
+        <p>No tienes tareas asignadas.</p>
+    </div>
+}
+else
+{
+    foreach (var tarea in Model)
+    {
+        <div class="task-card">
+            <div class="task-card-top">
+                <div>
+                    <div class="task-title">@tarea.Titulo</div>
+                    @if (!string.IsNullOrWhiteSpace(tarea.Descripcion))
+                    {
+                        <div class="task-desc">@tarea.Descripcion</div>
+                    }
+                </div>
+                @switch (tarea.Estado)
+                {
+                    case Guardias.Models.EstadoTarea.Pendiente:
+                        <span class="badge-ios badge-open" style="flex-shrink:0;">Pendiente</span>
+                        break;
+                    case Guardias.Models.EstadoTarea.EnProceso:
+                        <span class="badge-ios badge-process" style="flex-shrink:0;">En proceso</span>
+                        break;
+                }
+            </div>
+            <div class="task-meta">
+                @if (tarea.HoraProgramada.HasValue)
+                {
+                    <span><i class="bi bi-clock me-1"></i>@tarea.HoraProgramada.Value.ToString("HH:mm")</span>
+                }
+                <span><i class="bi bi-sun me-1"></i>
+                    @(tarea.Turno == Guardias.Models.Turno.Manana ? "Mañana" :
+                      tarea.Turno == Guardias.Models.Turno.Tarde ? "Tarde" :
+                      tarea.Turno == Guardias.Models.Turno.Noche ? "Noche" : "Todos los turnos")
+                </span>
+                @if (tarea.Guardia != null)
+                {
+                    <span><i class="bi bi-person me-1"></i>@tarea.Guardia.Nombre</span>
+                }
+                @if (tarea.Edificio != null)
+                {
+                    <span><i class="bi bi-building me-1"></i>@tarea.Edificio.Nombre</span>
+                }
+            </div>
+            <div style="margin-top:12px;">
+                <form method="post" asp-controller="Tarea" asp-action="Completar" asp-route-id="@tarea.Id" style="display:inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn-admin btn-admin-success" style="font-size:13px;padding:7px 14px;">
+                        <i class="bi bi-check2"></i> Marcar completada
+                    </button>
+                </form>
+            </div>
+        </div>
+    }
+}

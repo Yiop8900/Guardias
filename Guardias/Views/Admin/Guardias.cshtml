@@ -1,0 +1,80 @@
+@model List<Guardias.Models.Guardia>
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Guardias";
+    ViewData["AdminSection"] = "guardias";
+    ViewData["PageSub"] = "Administra los guardias y sus turnos asignados";
+}
+
+<div style="margin-bottom:16px;display:flex;justify-content:flex-end;">
+    <a href="/Admin/CrearGuardia" class="btn-admin btn-admin-primary">
+        <i class="bi bi-plus-lg"></i> Nuevo guardia
+    </a>
+</div>
+
+<div class="admin-card" style="padding:0;overflow:hidden;">
+    @if (!Model.Any())
+    {
+        <div style="padding:40px;text-align:center;color:var(--text2);">
+            <i class="bi bi-people" style="font-size:40px;display:block;margin-bottom:10px;"></i>
+            No hay guardias registrados. <a href="/Admin/CrearGuardia">Crear el primero</a>.
+        </div>
+    }
+    else
+    {
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Cargo</th>
+                    <th>Turno</th>
+                    <th>Edificio</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var g in Model)
+                {
+                    <tr>
+                        <td style="font-weight:500;">@g.Nombre</td>
+                        <td style="color:var(--text2);">@(g.Cargo ?? "—")</td>
+                        <td>
+                            <span class="badge-ios @(g.Turno == Guardias.Models.Turno.Manana ? "badge-done" : g.Turno == Guardias.Models.Turno.Tarde ? "badge-process" : "badge-running")">
+                                @(g.Turno == Guardias.Models.Turno.Manana ? "Mañana" :
+                                  g.Turno == Guardias.Models.Turno.Tarde ? "Tarde" : "Noche")
+                            </span>
+                        </td>
+                        <td>@(g.Edificio?.Nombre ?? "—")</td>
+                        <td>
+                            @if (g.Activo)
+                            {
+                                <span class="badge-ios badge-done">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="badge-ios" style="background:#f5f5f5;color:var(--text2);">Inactivo</span>
+                            }
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                <a href="/Admin/EditarGuardia/@g.Id" class="btn-admin btn-admin-secondary" style="padding:6px 12px;font-size:13px;">
+                                    <i class="bi bi-pencil"></i> Editar
+                                </a>
+                                @if (g.Activo)
+                                {
+                                    <form method="post" asp-controller="Admin" asp-action="EliminarGuardia" asp-route-id="@g.Id" style="display:inline;" onsubmit="return confirm('¿Desactivar a @g.Nombre?')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn-admin btn-admin-danger" style="padding:6px 12px;font-size:13px;">
+                                            <i class="bi bi-person-x"></i> Desactivar
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>

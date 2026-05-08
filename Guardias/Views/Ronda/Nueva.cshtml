@@ -1,0 +1,99 @@
+@{
+    ViewData["ActiveTab"] = "nueva";
+    var guardias = ViewBag.Guardias as List<Guardias.Models.Guardia> ?? new List<Guardias.Models.Guardia>();
+}
+
+<div class="page-header">
+    <h2>Nueva Ronda</h2>
+    <p>Ingresa los datos del turno</p>
+</div>
+
+<div class="progress-steps">
+    <div class="progress-step done"></div>
+    <div class="progress-step"></div>
+</div>
+
+@if (ViewContext.ModelState.ErrorCount > 0)
+{
+    <div class="alert-ios alert-error mb-3">
+        @foreach (var entry in ViewContext.ModelState.Values)
+        {
+            foreach (var err in entry.Errors)
+            {
+                <div>@err.ErrorMessage</div>
+            }
+        }
+    </div>
+}
+
+@if (!guardias.Any())
+{
+    <div class="form-section" style="text-align:center;padding:40px 20px;">
+        <i class="bi bi-person-x" style="font-size:44px;color:var(--text2);display:block;margin-bottom:12px;"></i>
+        <h3 style="font-size:17px;font-weight:600;margin-bottom:8px;">Sin guardias disponibles</h3>
+        <p style="color:var(--text2);font-size:14px;">Contacta al administrador para registrar los guardias del turno.</p>
+    </div>
+}
+else
+{
+    <form method="post" asp-controller="Ronda" asp-action="Nueva">
+        @Html.AntiForgeryToken()
+
+        <div class="form-section">
+            <label class="form-label-ios" for="guardia-select">Nombre del conserje</label>
+            <select id="guardia-select" name="guardiaId" class="form-control-ios" required onchange="onGuardiaChange(this.value)">
+                <option value="">Seleccionar guardia...</option>
+                @foreach (var g in guardias)
+                {
+                    <option value="@g.Id"
+                            data-cargo="@g.Cargo"
+                            data-turno="@(g.Turno == Guardias.Models.Turno.Manana ? "Mañana" : g.Turno == Guardias.Models.Turno.Tarde ? "Tarde" : "Noche")"
+                            data-edificio="@g.Edificio?.Nombre">
+                        @g.Nombre
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div class="form-section" id="info-section" style="display:none;">
+            <div style="margin-bottom:16px;">
+                <label class="form-label-ios">Cargo</label>
+                <div id="info-cargo" class="form-control-ios" style="background:#f0f0f5;color:var(--text2);"></div>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label class="form-label-ios">Turno</label>
+                <div id="info-turno" class="form-control-ios" style="background:#f0f0f5;color:var(--text2);"></div>
+            </div>
+            <div>
+                <label class="form-label-ios">Edificio</label>
+                <div id="info-edificio" class="form-control-ios" style="background:#f0f0f5;color:var(--text2);"></div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-primary-ios" id="btn-continuar" disabled>
+            Continuar <i class="bi bi-arrow-right"></i>
+        </button>
+    </form>
+}
+
+@section Scripts {
+<script>
+function onGuardiaChange(val) {
+    const sel = document.getElementById('guardia-select');
+    const opt = sel.options[sel.selectedIndex];
+    const btn = document.getElementById('btn-continuar');
+    const info = document.getElementById('info-section');
+
+    if (val) {
+        document.getElementById('info-cargo').textContent = opt.dataset.cargo || '—';
+        document.getElementById('info-turno').textContent = opt.dataset.turno || '—';
+        document.getElementById('info-edificio').textContent = opt.dataset.edificio || '—';
+        info.style.display = 'block';
+        btn.disabled = false;
+    } else {
+        info.style.display = 'none';
+        btn.disabled = true;
+    }
+}
+</script>
+}

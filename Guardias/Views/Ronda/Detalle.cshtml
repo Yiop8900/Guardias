@@ -1,0 +1,131 @@
+@model Guardias.Models.Ronda
+@{
+    ViewData["ActiveTab"] = "historial";
+}
+
+<div style="margin-bottom:12px;">
+    <a href="/Ronda/Historial" style="color:var(--blue);text-decoration:none;font-size:15px;">
+        <i class="bi bi-chevron-left"></i> Historial
+    </a>
+</div>
+
+<div class="page-header">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <h2>Ronda #@Model.Id</h2>
+        @switch (Model.Estado)
+        {
+            case Guardias.Models.EstadoRonda.EnCurso:
+                <span class="badge-ios badge-running">En curso</span>
+                break;
+            case Guardias.Models.EstadoRonda.Finalizada:
+                <span class="badge-ios badge-done">Finalizada</span>
+                break;
+            case Guardias.Models.EstadoRonda.FirmadaSupervisor:
+                <span class="badge-ios badge-signed">Firmada</span>
+                break;
+        }
+    </div>
+    <p>@Model.FechaHora.ToString("dd 'de' MMMM yyyy, HH:mm", new System.Globalization.CultureInfo("es-ES"))</p>
+</div>
+
+<!-- Info -->
+<div class="detail-section">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+            <div class="detail-label">Guardia</div>
+            <div class="detail-value">@Model.Guardia?.Nombre</div>
+        </div>
+        <div>
+            <div class="detail-label">Cargo</div>
+            <div class="detail-value">@(Model.Guardia?.Cargo ?? "—")</div>
+        </div>
+        <div>
+            <div class="detail-label">Edificio</div>
+            <div class="detail-value">@Model.Edificio?.Nombre</div>
+        </div>
+        <div>
+            <div class="detail-label">Turno</div>
+            <div class="detail-value">
+                @(Model.Guardia?.Turno == Guardias.Models.Turno.Manana ? "Mañana" :
+                  Model.Guardia?.Turno == Guardias.Models.Turno.Tarde ? "Tarde" : "Noche")
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Photos -->
+@if (Model.Fotos.Any())
+{
+    <div class="detail-section">
+        <div class="detail-label" style="margin-bottom:10px;">Fotos (@Model.Fotos.Count)</div>
+        <div class="detail-photo-grid">
+            @foreach (var foto in Model.Fotos)
+            {
+                <div class="detail-photo">
+                    <a href="@foto.RutaFoto" target="_blank">
+                        <img src="@foto.RutaFoto" alt="Foto ronda" loading="lazy" />
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<!-- Incident report -->
+@if (!string.IsNullOrWhiteSpace(Model.ReporteIncidencias))
+{
+    <div class="detail-section">
+        <div class="detail-label" style="margin-bottom:8px;">Reporte de incidencias</div>
+        <p style="font-size:15px;color:var(--text);">@Model.ReporteIncidencias</p>
+    </div>
+}
+
+<!-- Incidents list -->
+@if (Model.Incidencias.Any())
+{
+    <div class="detail-section">
+        <div class="detail-label" style="margin-bottom:10px;">Incidencias (@Model.Incidencias.Count)</div>
+        @foreach (var inc in Model.Incidencias)
+        {
+            <div style="padding:10px 0;border-bottom:1px solid var(--bg);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                    @switch (inc.Severidad)
+                    {
+                        case Guardias.Models.SeveridadIncidencia.Grave:
+                            <span class="badge-ios badge-grave">Grave</span>
+                            break;
+                        case Guardias.Models.SeveridadIncidencia.Moderada:
+                            <span class="badge-ios badge-process">Moderada</span>
+                            break;
+                        default:
+                            <span class="badge-ios" style="background:#f5f5f5;color:var(--text2);">Leve</span>
+                            break;
+                    }
+                    @switch (inc.Estado)
+                    {
+                        case Guardias.Models.EstadoIncidencia.Abierta:
+                            <span class="badge-ios badge-open">Abierta</span>
+                            break;
+                        case Guardias.Models.EstadoIncidencia.EnProceso:
+                            <span class="badge-ios badge-process">En proceso</span>
+                            break;
+                        case Guardias.Models.EstadoIncidencia.Cerrada:
+                            <span class="badge-ios badge-closed">Cerrada</span>
+                            break;
+                    }
+                </div>
+                <p style="font-size:14px;color:var(--text);">@inc.Descripcion</p>
+            </div>
+        }
+    </div>
+}
+
+<!-- Signature -->
+@if (Model.Estado == Guardias.Models.EstadoRonda.FirmadaSupervisor)
+{
+    <div class="detail-section" style="background:#E8F5E9;">
+        <div class="detail-label">Firmado por supervisor</div>
+        <div class="detail-value" style="color:#1B5E20;">@Model.FirmadoPor</div>
+        <div style="font-size:13px;color:#388E3C;margin-top:4px;">@Model.FechaFirma?.ToString("dd/MM/yyyy HH:mm")</div>
+    </div>
+}

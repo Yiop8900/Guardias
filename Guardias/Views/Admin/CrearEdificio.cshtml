@@ -1,0 +1,42 @@
+@model Guardias.Models.Edificio
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Nuevo Edificio";
+    ViewData["AdminSection"] = "edificios";
+}
+
+<div style="margin-bottom:16px;">
+    <a href="/Admin/Edificios" class="btn-admin btn-admin-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<div class="admin-card" style="max-width:560px;">
+    <form method="post" asp-controller="Admin" asp-action="CrearEdificio">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="alert-ios alert-error mb-3"></div>
+
+        <div class="form-admin-group">
+            <label asp-for="Nombre" class="form-admin-label"></label>
+            <input asp-for="Nombre" class="form-admin-control" placeholder="Ej: Torre A" />
+            <span asp-validation-for="Nombre" style="color:var(--red);font-size:13px;"></span>
+        </div>
+
+        <div class="form-admin-group">
+            <label asp-for="Descripcion" class="form-admin-label"></label>
+            <textarea asp-for="Descripcion" class="form-admin-control" rows="3" placeholder="Descripción opcional..."></textarea>
+        </div>
+
+        <div class="form-admin-group">
+            <label class="form-admin-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input asp-for="Activo" type="checkbox" checked style="width:18px;height:18px;" />
+                <span>Edificio activo</span>
+            </label>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px;">
+            <button type="submit" class="btn-admin btn-admin-primary" style="padding:10px 24px;">
+                <i class="bi bi-check-lg"></i> Crear edificio
+            </button>
+            <a href="/Admin/Edificios" class="btn-admin btn-admin-secondary" style="padding:10px 20px;">Cancelar</a>
+        </div>
+    </form>
+</div>

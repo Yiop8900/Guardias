@@ -1,0 +1,74 @@
+@model Guardias.Models.Incidencia
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Gestionar Incidencia";
+    ViewData["AdminSection"] = "incidencias";
+}
+
+<div style="margin-bottom:16px;">
+    <a href="/Admin/Incidencias" class="btn-admin btn-admin-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<!-- Incident summary -->
+<div class="admin-card" style="max-width:600px;margin-bottom:16px;">
+    <div style="font-weight:600;font-size:16px;margin-bottom:14px;">Incidencia #@Model.Id</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:14px;margin-bottom:14px;">
+        <div><span style="color:var(--text2);">Guardia:</span> <strong>@Model.Ronda?.Guardia?.Nombre</strong></div>
+        <div><span style="color:var(--text2);">Edificio:</span> <strong>@Model.Ronda?.Edificio?.Nombre</strong></div>
+        <div><span style="color:var(--text2);">Ronda:</span>
+            <a href="/Ronda/Detalle/@Model.RondaId" style="color:var(--blue);">#@Model.RondaId</a>
+        </div>
+        <div><span style="color:var(--text2);">Registrada:</span> <strong>@Model.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</strong></div>
+    </div>
+    <div style="background:var(--bg);border-radius:8px;padding:12px;font-size:15px;">
+        @Model.Descripcion
+    </div>
+</div>
+
+<!-- Update form -->
+<div class="admin-card" style="max-width:600px;">
+    <div style="font-weight:600;font-size:16px;margin-bottom:16px;">Actualizar incidencia</div>
+
+    <form method="post" asp-controller="Admin" asp-action="GestionarIncidencia" asp-route-id="@Model.Id">
+        @Html.AntiForgeryToken()
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="form-admin-group">
+                <label class="form-admin-label">Severidad</label>
+                <select name="severidad" id="sel-severidad" class="form-admin-control">
+                    <option value="0">Leve</option>
+                    <option value="1">Moderada</option>
+                    <option value="2">Grave</option>
+                </select>
+            </div>
+            <div class="form-admin-group">
+                <label class="form-admin-label">Estado</label>
+                <select name="estado" id="sel-estado" class="form-admin-control">
+                    <option value="0">Abierta</option>
+                    <option value="1">En proceso</option>
+                    <option value="2">Cerrada</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-admin-group">
+            <label class="form-admin-label">Notas de cierre / resolución</label>
+            <textarea name="notasCierre" class="form-admin-control" rows="3"
+                      placeholder="Describe cómo se resolvió la incidencia...">@Model.NotasCierre</textarea>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px;">
+            <button type="submit" class="btn-admin btn-admin-primary" style="padding:10px 24px;">
+                <i class="bi bi-check-lg"></i> Guardar cambios
+            </button>
+            <a href="/Admin/Incidencias" class="btn-admin btn-admin-secondary" style="padding:10px 20px;">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+    document.getElementById('sel-severidad').value = '@((int)Model.Severidad)';
+    document.getElementById('sel-estado').value = '@((int)Model.Estado)';
+</script>
+}

@@ -1,0 +1,68 @@
+@model Guardias.Models.Tarea
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Editar Tarea";
+    ViewData["AdminSection"] = "tareas";
+}
+
+<div style="margin-bottom:16px;">
+    <a href="/Admin/Tareas" class="btn-admin btn-admin-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<div class="admin-card" style="max-width:600px;">
+    <form method="post" asp-controller="Admin" asp-action="EditarTarea" asp-route-id="@Model.Id">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="FechaCreacion" />
+        <div asp-validation-summary="ModelOnly" class="alert-ios alert-error mb-3"></div>
+
+        <div class="form-admin-group">
+            <label asp-for="Titulo" class="form-admin-label"></label>
+            <input asp-for="Titulo" class="form-admin-control" />
+            <span asp-validation-for="Titulo" style="color:var(--red);font-size:13px;"></span>
+        </div>
+
+        <div class="form-admin-group">
+            <label asp-for="Descripcion" class="form-admin-label"></label>
+            <textarea asp-for="Descripcion" class="form-admin-control" rows="3"></textarea>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="form-admin-group">
+                <label asp-for="HoraProgramada" class="form-admin-label"></label>
+                <input asp-for="HoraProgramada" type="time" class="form-admin-control" />
+            </div>
+            <div class="form-admin-group">
+                <label asp-for="Turno" class="form-admin-label"></label>
+                <select asp-for="Turno" asp-items="Html.GetEnumSelectList<Guardias.Models.Turno>()" class="form-admin-control"></select>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="form-admin-group">
+                <label asp-for="GuardiaId" class="form-admin-label">Guardia asignado</label>
+                <select asp-for="GuardiaId" asp-items="ViewBag.GuardiasList" class="form-admin-control">
+                    <option value="">— Todos los guardias —</option>
+                </select>
+            </div>
+            <div class="form-admin-group">
+                <label asp-for="EdificioId" class="form-admin-label">Edificio</label>
+                <select asp-for="EdificioId" asp-items="ViewBag.Edificios" class="form-admin-control">
+                    <option value="">— Todos —</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-admin-group">
+            <label asp-for="Estado" class="form-admin-label"></label>
+            <select asp-for="Estado" asp-items="Html.GetEnumSelectList<Guardias.Models.EstadoTarea>()" class="form-admin-control"></select>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px;">
+            <button type="submit" class="btn-admin btn-admin-primary" style="padding:10px 24px;">
+                <i class="bi bi-check-lg"></i> Guardar cambios
+            </button>
+            <a href="/Admin/Tareas" class="btn-admin btn-admin-secondary" style="padding:10px 20px;">Cancelar</a>
+        </div>
+    </form>
+</div>

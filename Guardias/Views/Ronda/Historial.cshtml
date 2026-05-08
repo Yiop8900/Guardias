@@ -1,0 +1,53 @@
+@model List<Guardias.Models.Ronda>
+@{
+    ViewData["ActiveTab"] = "historial";
+}
+
+<div class="page-header">
+    <h2>Historial de Rondas</h2>
+    <p>@Model.Count ronda(s) registrada(s)</p>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="empty-state">
+        <div class="empty-icon"><i class="bi bi-clipboard2"></i></div>
+        <h3>Sin rondas registradas</h3>
+        <p>Inicia una nueva ronda para comenzar el registro</p>
+    </div>
+}
+else
+{
+    foreach (var ronda in Model)
+    {
+        <a href="/Ronda/Detalle/@ronda.Id" class="round-card">
+            <div class="round-card-top">
+                <div class="round-card-name">@ronda.Guardia?.Nombre</div>
+                @switch (ronda.Estado)
+                {
+                    case Guardias.Models.EstadoRonda.EnCurso:
+                        <span class="badge-ios badge-running">En curso</span>
+                        break;
+                    case Guardias.Models.EstadoRonda.Finalizada:
+                        <span class="badge-ios badge-done">Finalizada</span>
+                        break;
+                    case Guardias.Models.EstadoRonda.FirmadaSupervisor:
+                        <span class="badge-ios badge-signed">Firmada</span>
+                        break;
+                }
+            </div>
+            <div class="round-card-meta">
+                <span><i class="bi bi-building me-1"></i>@ronda.Edificio?.Nombre</span>
+                <span><i class="bi bi-clock me-1"></i>@ronda.FechaHora.ToString("dd/MM/yyyy HH:mm")</span>
+                @if (ronda.Fotos.Any())
+                {
+                    <span><i class="bi bi-camera me-1"></i>@ronda.Fotos.Count foto(s)</span>
+                }
+                @if (ronda.Incidencias.Any())
+                {
+                    <span style="color:var(--orange)"><i class="bi bi-exclamation-triangle me-1"></i>@ronda.Incidencias.Count incidencia(s)</span>
+                }
+            </div>
+        </a>
+    }
+}
