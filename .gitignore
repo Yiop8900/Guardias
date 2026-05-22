@@ -1,8 +1,9 @@
-# Credenciales de Google Drive (NUNCA subir al repositorio)
+# Credenciales y configuración local (NUNCA subir al repositorio)
 credentials/
 *.json
 !appsettings.json
-!appsettings.*.json
+# appsettings.Development.json se excluye porque contiene credenciales reales
+appsettings.Development.json
 
 # Archivos de build
 bin/
