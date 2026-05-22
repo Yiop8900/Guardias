@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Guardias")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4d258d445999f15db7af5c349d833adc062f3b5d")]
 [assembly: System.Reflection.AssemblyProductAttribute("Guardias")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Guardias")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

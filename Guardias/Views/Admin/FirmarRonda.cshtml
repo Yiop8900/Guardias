@@ -12,11 +12,11 @@
 <!-- Round summary -->
 <div class="admin-card" style="max-width:600px;margin-bottom:16px;">
     <div style="font-weight:600;font-size:16px;margin-bottom:14px;">Ronda #@Model.Id</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:14px;">
+    <div class="admin-2col" style="font-size:14px;">
         <div><span style="color:var(--text2);">Guardia:</span> <strong>@Model.Guardia?.Nombre</strong></div>
         <div><span style="color:var(--text2);">Edificio:</span> <strong>@Model.Edificio?.Nombre</strong></div>
         <div><span style="color:var(--text2);">Fecha:</span> <strong>@Model.FechaHora.ToString("dd/MM/yyyy HH:mm")</strong></div>
-        <div><span style="color:var(--text2);">Fotos:</span> <strong>@Model.Fotos.Count</strong></div>
+        <div><span style="color:var(--text2);">Fotos:</span> <strong>@Model.AreaRondas.Sum(ar => ar.Fotos.Count)</strong></div>
     </div>
     @if (!string.IsNullOrWhiteSpace(Model.ReporteIncidencias))
     {
@@ -24,10 +24,10 @@
             <strong>Reporte:</strong> @Model.ReporteIncidencias
         </div>
     }
-    @if (Model.Fotos.Any())
+    @if (Model.AreaRondas.Any(ar => ar.Fotos.Any()))
     {
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px;">
-            @foreach (var f in Model.Fotos.Take(4))
+            @foreach (var f in Model.AreaRondas.SelectMany(ar => ar.Fotos).Take(4))
             {
                 <div style="aspect-ratio:1;border-radius:8px;overflow:hidden;">
                     <img src="@f.RutaFoto" style="width:100%;height:100%;object-fit:cover;" alt="foto" />

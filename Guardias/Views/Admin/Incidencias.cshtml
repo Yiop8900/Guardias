@@ -4,7 +4,24 @@
     ViewData["Title"] = "Incidencias";
     ViewData["AdminSection"] = "incidencias";
     ViewData["PageSub"] = "Gestiona el estado y severidad de las incidencias";
+    var edificios = ViewBag.EdificiosList as List<Guardias.Models.Edificio>;
+    int? sel = ViewBag.SelectedEdificio as int?;
 }
+
+<div class="admin-toolbar">
+    <form method="get" asp-action="Incidencias" style="display:flex;gap:8px;align-items:center;flex:1;">
+        <select name="edificioId" class="form-admin-control" style="min-width:180px;" onchange="this.form.submit()"
+                asp-items="@(new SelectList(edificios ?? new(), "Id", "Nombre", sel))">
+            <option value="">Todos los edificios</option>
+        </select>
+        @if (sel.HasValue)
+        {
+            <a href="/Admin/Incidencias" class="btn-admin btn-admin-secondary" style="padding:8px 14px;white-space:nowrap;">
+                <i class="bi bi-x"></i> Quitar filtro
+            </a>
+        }
+    </form>
+</div>
 
 <div class="admin-card" style="padding:0;overflow:hidden;">
     @if (!Model.Any())
@@ -16,10 +33,12 @@
     }
     else
     {
+        <div class="table-scroll-wrap">
         <table class="admin-table">
             <thead>
                 <tr>
                     <th>Guardia</th>
+                    <th>Edificio</th>
                     <th>Descripción</th>
                     <th>Severidad</th>
                     <th>Estado</th>
@@ -32,6 +51,7 @@
                 {
                     <tr>
                         <td style="font-weight:500;">@inc.Ronda?.Guardia?.Nombre</td>
+                        <td style="color:var(--text2);white-space:nowrap;">@inc.Ronda?.Edificio?.Nombre</td>
                         <td style="max-width:280px;">
                             <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px;">
                                 @inc.Descripcion
@@ -81,5 +101,6 @@
                 }
             </tbody>
         </table>
+        </div>
     }
 </div>

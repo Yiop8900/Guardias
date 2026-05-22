@@ -7,8 +7,7 @@ public class Ronda
 {
     public int Id { get; set; }
 
-    [Required]
-    public int GuardiaId { get; set; }
+    public int? GuardiaId { get; set; }
 
     [Required]
     public int EdificioId { get; set; }
@@ -27,11 +26,15 @@ public class Ronda
 
     public DateTime? FechaFirma { get; set; }
 
+    /// <summary>Nombre del operador: guardia seleccionado o usuario del edificio si no hay guardia.</summary>
+    [StringLength(100)]
+    public string? NombreOperador { get; set; }
+
     public Guardia? Guardia { get; set; }
     public Edificio? Edificio { get; set; }
 
     [JsonIgnore]
-    public ICollection<FotoRonda> Fotos { get; set; } = new List<FotoRonda>();
+    public ICollection<AreaRonda> AreaRondas { get; set; } = new List<AreaRonda>();
 
     [JsonIgnore]
     public ICollection<Incidencia> Incidencias { get; set; } = new List<Incidencia>();

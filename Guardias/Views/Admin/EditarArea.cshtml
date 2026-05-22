@@ -1,0 +1,75 @@
+@model Guardias.Models.Area
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Editar Área";
+    ViewData["AdminSection"] = "areas";
+    var edificios = ViewBag.EdificiosList as List<Guardias.Models.Edificio>;
+}
+
+<div style="margin-bottom:16px;">
+    <a href="/Admin/Areas" class="btn-admin btn-admin-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<div class="admin-card" style="max-width:560px;">
+    <div style="font-weight:600;font-size:17px;margin-bottom:20px;display:flex;align-items:center;gap:8px;">
+        <i class="bi bi-pencil-square" style="color:var(--blue);"></i> Editar área
+    </div>
+
+    @if (ViewContext.ModelState.ErrorCount > 0)
+    {
+        <div class="alert-ios alert-error" style="margin-bottom:14px;">
+            @foreach (var entry in ViewContext.ModelState.Values)
+            {
+                foreach (var e in entry.Errors)
+                {
+                    <div>@e.ErrorMessage</div>
+                }
+            }
+        </div>
+    }
+
+    <form method="post" asp-controller="Admin" asp-action="EditarArea">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="Id" value="@Model.Id" />
+
+        <div class="form-admin-group">
+            <label class="form-admin-label">Nombre <span style="color:red;">*</span></label>
+            <input type="text" name="Nombre" class="form-admin-control"
+                   value="@Model.Nombre" required />
+        </div>
+
+        <div class="form-admin-group">
+            <label class="form-admin-label">Descripción</label>
+            <textarea name="Descripcion" class="form-admin-control" rows="2">@Model.Descripcion</textarea>
+        </div>
+
+        <div class="form-admin-group">
+            <label class="form-admin-label">Edificio <span style="color:red;">*</span></label>
+            <select name="EdificioId" class="form-admin-control" required>
+                @foreach (var e in edificios!)
+                {
+                    <option value="@e.Id" selected="@(e.Id == Model.EdificioId)">@e.Nombre</option>
+                }
+            </select>
+        </div>
+
+        <div class="form-admin-group">
+            <label class="form-admin-label">Orden</label>
+            <input type="number" name="Orden" class="form-admin-control"
+                   value="@Model.Orden" min="1" />
+        </div>
+
+        <div class="form-admin-group" style="display:flex;align-items:center;gap:10px;">
+            <input type="checkbox" name="Activo" id="activo" value="true"
+                   @(Model.Activo ? "checked" : "") />
+            <label for="activo" style="font-size:14px;margin:0;">Área activa</label>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px;">
+            <button type="submit" class="btn-admin btn-admin-primary" style="padding:10px 24px;">
+                <i class="bi bi-floppy"></i> Guardar cambios
+            </button>
+            <a href="/Admin/Areas" class="btn-admin btn-admin-secondary" style="padding:10px 20px;">Cancelar</a>
+        </div>
+    </form>
+</div>

@@ -4,9 +4,23 @@
     ViewData["Title"] = "Tareas Programadas";
     ViewData["AdminSection"] = "tareas";
     ViewData["PageSub"] = "Programa tareas por turno y hora";
+    var edificios = ViewBag.EdificiosList as List<Guardias.Models.Edificio>;
+    int? sel = ViewBag.SelectedEdificio as int?;
 }
 
-<div style="margin-bottom:16px;display:flex;justify-content:flex-end;">
+<div class="admin-toolbar">
+    <form method="get" asp-action="Tareas" style="display:flex;gap:8px;align-items:center;flex:1;">
+        <select name="edificioId" class="form-admin-control" style="min-width:180px;" onchange="this.form.submit()"
+                asp-items="@(new SelectList(edificios ?? new(), "Id", "Nombre", sel))">
+            <option value="">Todos los edificios</option>
+        </select>
+        @if (sel.HasValue)
+        {
+            <a href="/Admin/Tareas" class="btn-admin btn-admin-secondary" style="padding:8px 14px;white-space:nowrap;">
+                <i class="bi bi-x"></i> Quitar filtro
+            </a>
+        }
+    </form>
     <a href="/Admin/CrearTarea" class="btn-admin btn-admin-primary">
         <i class="bi bi-plus-lg"></i> Nueva tarea
     </a>
@@ -22,6 +36,7 @@
     }
     else
     {
+        <div class="table-scroll-wrap">
         <table class="admin-table">
             <thead>
                 <tr>
@@ -83,9 +98,10 @@
                                 <a href="/Admin/EditarTarea/@t.Id" class="btn-admin btn-admin-secondary" style="padding:6px 12px;font-size:13px;">
                                     <i class="bi bi-pencil"></i> Editar
                                 </a>
-                                <form method="post" asp-controller="Admin" asp-action="EliminarTarea" asp-route-id="@t.Id" style="display:inline;" onsubmit="return confirm('¿Eliminar esta tarea?')">
+                                <form id="del-tarea-@t.Id" method="post" asp-controller="Admin" asp-action="EliminarTarea" asp-route-id="@t.Id" style="display:inline;">
                                     @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn-admin btn-admin-danger" style="padding:6px 12px;font-size:13px;">
+                                    <button type="button" class="btn-admin btn-admin-danger" style="padding:6px 12px;font-size:13px;"
+                                            onclick="confirmarEliminar('del-tarea-@t.Id','¿Eliminar tarea?','Se eliminará esta tarea de forma permanente.')">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
@@ -95,5 +111,6 @@
                 }
             </tbody>
         </table>
+        </div>
     }
 </div>

@@ -5,8 +5,11 @@
     ViewData["AdminSection"] = "incidencias";
 }
 
-<div style="margin-bottom:16px;">
+<div style="margin-bottom:16px;display:flex;gap:10px;align-items:center;">
     <a href="/Admin/Incidencias" class="btn-admin btn-admin-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+    <a href="/Admin/ExportarPdfIncidencia/@Model.Id" target="_blank" class="btn-admin btn-admin-primary">
+        <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
+    </a>
 </div>
 
 <!-- Incident summary -->
@@ -32,7 +35,7 @@
     <form method="post" asp-controller="Admin" asp-action="GestionarIncidencia" asp-route-id="@Model.Id">
         @Html.AntiForgeryToken()
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="admin-2col">
             <div class="form-admin-group">
                 <label class="form-admin-label">Severidad</label>
                 <select name="severidad" id="sel-severidad" class="form-admin-control">

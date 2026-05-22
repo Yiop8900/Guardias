@@ -4,7 +4,24 @@
     ViewData["Title"] = "Rondas";
     ViewData["AdminSection"] = "rondas";
     ViewData["PageSub"] = "Revisa y firma las rondas de los guardias";
+    var edificios = ViewBag.EdificiosList as List<Guardias.Models.Edificio>;
+    int? sel = ViewBag.SelectedEdificio as int?;
 }
+
+<div class="admin-toolbar">
+    <form method="get" asp-action="Rondas" style="display:flex;gap:8px;align-items:center;flex:1;">
+        <select name="edificioId" class="form-admin-control" style="min-width:180px;" onchange="this.form.submit()"
+                asp-items="@(new SelectList(edificios ?? new(), "Id", "Nombre", sel))">
+            <option value="">Todos los edificios</option>
+        </select>
+        @if (sel.HasValue)
+        {
+            <a href="/Admin/Rondas" class="btn-admin btn-admin-secondary" style="padding:8px 14px;white-space:nowrap;">
+                <i class="bi bi-x"></i> Quitar filtro
+            </a>
+        }
+    </form>
+</div>
 
 <div class="admin-card" style="padding:0;overflow:hidden;">
     @if (!Model.Any())
@@ -16,6 +33,7 @@
     }
     else
     {
+        <div class="table-scroll-wrap">
         <table class="admin-table">
             <thead>
                 <tr>
@@ -34,13 +52,14 @@
                 {
                     <tr>
                         <td style="color:var(--text2);">@r.Id</td>
-                        <td style="font-weight:500;">@r.Guardia?.Nombre</td>
+                        <td style="font-weight:500;">@(r.Guardia?.Nombre ?? r.NombreOperador ?? "—")</td>
                         <td style="color:var(--text2);">@r.Edificio?.Nombre</td>
                         <td style="color:var(--text2);">@r.FechaHora.ToString("dd/MM/yy HH:mm")</td>
                         <td>
-                            @if (r.Fotos.Any())
+                            @{ var totalFotos = r.AreaRondas.Sum(ar => ar.Fotos.Count); }
+                            @if (r.AreaRondas.Any(ar => ar.Fotos.Any()))
                             {
-                                <span class="badge-ios badge-done">@r.Fotos.Count foto(s)</span>
+                                <span class="badge-ios badge-done">@totalFotos foto(s)</span>
                             }
                             else
                             {
@@ -73,8 +92,11 @@
                         </td>
                         <td>
                             <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                                <a href="/Ronda/Detalle/@r.Id" class="btn-admin btn-admin-secondary" style="padding:6px 12px;font-size:13px;" target="_blank">
+                                <a href="/Admin/DetalleRonda/@r.Id" class="btn-admin btn-admin-secondary" style="padding:6px 12px;font-size:13px;">
                                     <i class="bi bi-eye"></i> Ver
+                                </a>
+                                <a href="/Admin/ExportarPdfRonda/@r.Id" target="_blank" class="btn-admin btn-admin-secondary" style="padding:6px 12px;font-size:13px;">
+                                    <i class="bi bi-file-earmark-pdf"></i> PDF
                                 </a>
                                 @if (r.Estado == Guardias.Models.EstadoRonda.Finalizada)
                                 {
@@ -88,5 +110,6 @@
                 }
             </tbody>
         </table>
+        </div>
     }
 </div>

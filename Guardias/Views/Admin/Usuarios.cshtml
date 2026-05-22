@@ -1,0 +1,101 @@
+@model List<Guardias.Models.UsuarioEdificio>
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Usuarios de Edificio";
+    ViewData["AdminSection"] = "usuarios";
+    ViewData["PageSub"] = "Gestiona los accesos de guardias por edificio";
+}
+
+<div class="admin-toolbar">
+    <div style="flex:1;"></div>
+    <a href="/Admin/CrearUsuario" class="btn-admin btn-admin-primary">
+        <i class="bi bi-person-plus"></i> Nuevo usuario
+    </a>
+</div>
+
+<div class="admin-card" style="padding:0;overflow:hidden;">
+    @if (!Model.Any())
+    {
+        <div style="padding:40px;text-align:center;color:var(--text2);">
+            <i class="bi bi-person-lock" style="font-size:40px;display:block;margin-bottom:10px;"></i>
+            No hay usuarios registrados.
+        </div>
+    }
+    else
+    {
+        <div class="table-scroll-wrap">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Edificio</th>
+                    <th>
+                        Contraseña
+                        <button type="button" onclick="toggleHashes()" id="btnToggleHash"
+                                style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--blue);margin-left:6px;">
+                            <i class="bi bi-eye" id="hashEyeIcon"></i> mostrar
+                        </button>
+                    </th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in Model)
+                {
+                    <tr>
+                        <td style="font-weight:500;">
+                            <i class="bi bi-person me-2" style="color:var(--blue);"></i>@u.NombreUsuario
+                        </td>
+                        <td>@u.Edificio?.Nombre</td>
+                        <td>
+                            <span class="hash-cell" style="font-family:monospace;font-weight:600;color:var(--text);display:none;">
+                                @(u.PasswordPlain ?? "—")
+                            </span>
+                            <span class="hash-hidden" style="color:var(--text2);letter-spacing:2px;">••••••••</span>
+                        </td>
+                        <td>
+                            @if (u.Activo)
+                            {
+                                <span class="badge-ios badge-done">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="badge-ios" style="background:#f5f5f5;color:var(--text2);">Inactivo</span>
+                            }
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                <a href="/Admin/EditarUsuario/@u.Id" class="btn-admin btn-admin-secondary" style="padding:6px 12px;font-size:13px;">
+                                    <i class="bi bi-pencil"></i> Editar
+                                </a>
+                                <form id="del-usuario-@u.Id" method="post" asp-controller="Admin" asp-action="EliminarUsuario">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@u.Id" />
+                                    <button type="button" class="btn-admin btn-admin-danger" style="padding:6px 12px;font-size:13px;"
+                                            onclick="confirmarEliminar('del-usuario-@u.Id','¿Eliminar usuario?','Se eliminará el usuario @u.NombreUsuario de forma permanente.')">
+                                        <i class="bi bi-trash"></i> Eliminar
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script>
+    var hashVisible = false;
+    function toggleHashes() {
+        hashVisible = !hashVisible;
+        document.querySelectorAll('.hash-cell').forEach(el => el.style.display = hashVisible ? 'block' : 'none');
+        document.querySelectorAll('.hash-hidden').forEach(el => el.style.display = hashVisible ? 'none' : 'inline');
+        document.getElementById('hashEyeIcon').className = hashVisible ? 'bi bi-eye-slash' : 'bi bi-eye';
+        document.getElementById('btnToggleHash').childNodes[1].textContent = hashVisible ? ' ocultar' : ' mostrar';
+    }
+</script>
+}

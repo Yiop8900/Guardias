@@ -22,6 +22,7 @@
     }
     else
     {
+        <div class="table-scroll-wrap">
         <table class="admin-table">
             <thead>
                 <tr>
@@ -61,20 +62,19 @@
                                 <a href="/Admin/EditarGuardia/@g.Id" class="btn-admin btn-admin-secondary" style="padding:6px 12px;font-size:13px;">
                                     <i class="bi bi-pencil"></i> Editar
                                 </a>
-                                @if (g.Activo)
-                                {
-                                    <form method="post" asp-controller="Admin" asp-action="EliminarGuardia" asp-route-id="@g.Id" style="display:inline;" onsubmit="return confirm('¿Desactivar a @g.Nombre?')">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn-admin btn-admin-danger" style="padding:6px 12px;font-size:13px;">
-                                            <i class="bi bi-person-x"></i> Desactivar
-                                        </button>
-                                    </form>
-                                }
+                                <form id="del-guardia-@g.Id" method="post" asp-controller="Admin" asp-action="EliminarGuardia" asp-route-id="@g.Id" style="display:inline;">
+                                    @Html.AntiForgeryToken()
+                                    <button type="button" class="btn-admin btn-admin-danger" style="padding:6px 12px;font-size:13px;"
+                                            onclick="confirmarEliminar('del-guardia-@g.Id','¿Eliminar guardia?','Se eliminará @g.Nombre de forma permanente.')">
+                                        <i class="bi bi-trash"></i> Eliminar
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
                 }
             </tbody>
         </table>
+        </div>
     }
 </div>

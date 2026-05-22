@@ -22,6 +22,7 @@
     }
     else
     {
+        <div class="table-scroll-wrap">
         <table class="admin-table">
             <thead>
                 <tr>
@@ -52,20 +53,19 @@
                                 <a href="/Admin/EditarEdificio/@e.Id" class="btn-admin btn-admin-secondary" style="padding:6px 12px;font-size:13px;">
                                     <i class="bi bi-pencil"></i> Editar
                                 </a>
-                                @if (e.Activo)
-                                {
-                                    <form method="post" asp-controller="Admin" asp-action="EliminarEdificio" asp-route-id="@e.Id" style="display:inline;" onsubmit="return confirm('¿Desactivar @e.Nombre?')">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn-admin btn-admin-danger" style="padding:6px 12px;font-size:13px;">
-                                            <i class="bi bi-x-circle"></i> Desactivar
-                                        </button>
-                                    </form>
-                                }
+                                <form id="del-edificio-@e.Id" method="post" asp-controller="Admin" asp-action="EliminarEdificio" asp-route-id="@e.Id" style="display:inline;">
+                                    @Html.AntiForgeryToken()
+                                    <button type="button" class="btn-admin btn-admin-danger" style="padding:6px 12px;font-size:13px;"
+                                            onclick="confirmarEliminar('del-edificio-@e.Id','¿Eliminar edificio?','Se eliminará @e.Nombre y todos sus datos de forma permanente.')">
+                                        <i class="bi bi-trash"></i> Eliminar
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
                 }
             </tbody>
         </table>
+        </div>
     }
 </div>

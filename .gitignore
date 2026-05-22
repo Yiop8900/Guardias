@@ -1,0 +1,12 @@
+# Credenciales de Google Drive (NUNCA subir al repositorio)
+credentials/
+*.json
+!appsettings.json
+!appsettings.*.json
+
+# Archivos de build
+bin/
+obj/
+
+# Uploads locales
+wwwroot/uploads/

@@ -28,10 +28,16 @@
 
 @if (!guardias.Any())
 {
-    <div class="form-section" style="text-align:center;padding:40px 20px;">
+    <div class="form-section" style="text-align:center;padding:32px 20px;">
         <i class="bi bi-person-x" style="font-size:44px;color:var(--text2);display:block;margin-bottom:12px;"></i>
-        <h3 style="font-size:17px;font-weight:600;margin-bottom:8px;">Sin guardias disponibles</h3>
-        <p style="color:var(--text2);font-size:14px;">Contacta al administrador para registrar los guardias del turno.</p>
+        <h3 style="font-size:17px;font-weight:600;margin-bottom:8px;">Sin guardias registrados</h3>
+        <p style="color:var(--text2);font-size:14px;margin-bottom:24px;">No hay guardias asignados a este edificio. Puedes igualmente registrar la ronda.</p>
+        <form method="post" asp-controller="Ronda" asp-action="Nueva">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn-primary-ios">
+                <i class="bi bi-play-circle me-1"></i> Iniciar ronda sin guardia
+            </button>
+        </form>
     </div>
 }
 else

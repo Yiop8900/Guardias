@@ -1,0 +1,308 @@
+@model Guardias.Models.Ronda
+@{
+    Layout = null;
+    var areaRondas = Model.AreaRondas.OrderBy(ar => ar.Area!.Orden).ToList();
+    var operador = Model.Guardia?.Nombre ?? Model.NombreOperador ?? "—";
+    var estadoLabel = Model.Estado switch {
+        Guardias.Models.EstadoRonda.FirmadaSupervisor => "Firmada",
+        Guardias.Models.EstadoRonda.Finalizada => "Finalizada",
+        _ => "En curso"
+    };
+    int totalFotos = areaRondas.Sum(ar => ar.Fotos.Count);
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reporte Ronda #@Model.Id — @Model.Edificio?.Nombre</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1a1a1a; background: #fff; }
+        .page { max-width: 820px; margin: 0 auto; padding: 32px 40px; }
+
+        /* Header */
+        .report-header { display: flex; align-items: center; gap: 16px; border-bottom: 3px solid #1e3a6e; padding-bottom: 18px; margin-bottom: 20px; }
+        .report-logo { width: 60px; height: 60px; object-fit: contain; flex-shrink: 0; }
+        .report-title-block { flex: 1; }
+        .report-title { font-size: 20px; font-weight: 700; color: #1e3a6e; letter-spacing: .5px; }
+        .report-subtitle { font-size: 12px; color: #555; margin-top: 2px; }
+        .report-id { font-size: 24px; font-weight: 800; color: #1e3a6e; white-space: nowrap; }
+
+        /* Meta grid */
+        .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; margin-bottom: 20px; }
+        .meta-cell { padding: 9px 14px; border-bottom: 1px solid #eee; }
+        .meta-cell:nth-last-child(-n+2) { border-bottom: none; }
+        .meta-label { font-size: 10px; text-transform: uppercase; letter-spacing: .7px; color: #888; margin-bottom: 3px; }
+        .meta-value { font-weight: 600; font-size: 13px; }
+        .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+
+        /* Sections */
+        .section { margin-bottom: 22px; }
+        .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: #1e3a6e; border-bottom: 1.5px solid #c5d5ea; padding-bottom: 5px; margin-bottom: 12px; }
+
+        /* Areas table */
+        .areas-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .areas-table th { background: #f0f4fa; color: #1e3a6e; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; padding: 7px 12px; text-align: left; border-bottom: 2px solid #c5d5ea; }
+        .areas-table td { padding: 8px 12px; border-bottom: 1px solid #eee; vertical-align: top; }
+        .areas-table tr:last-child td { border-bottom: none; }
+        .area-status-ok { color: #2e7d32; font-weight: 700; }
+        .area-status-pending { color: #e65100; font-weight: 700; }
+        .inc-badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+
+        /* Photos */
+        .photos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .photo-item { break-inside: avoid; }
+        .photo-item img { width: 100%; height: 190px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; display: block; }
+        .photo-caption { font-size: 11px; color: #666; margin-top: 4px; text-align: center; }
+
+        /* Incidences */
+        .inc-row { padding: 9px 0; border-bottom: 1px solid #eee; }
+        .inc-row:last-child { border-bottom: none; }
+        .inc-desc { font-size: 13px; margin-top: 3px; }
+
+        /* Signature */
+        .signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 8px; }
+        .signature-space { height: 56px; }
+        .signature-box { border-top: 1.5px solid #333; padding-top: 8px; }
+        .signature-label { font-size: 11px; color: #555; text-align: center; }
+        .signature-name { font-size: 12px; font-weight: 600; text-align: center; margin-top: 2px; }
+
+        /* Footer */
+        .report-footer { border-top: 1px solid #ddd; margin-top: 28px; padding-top: 10px; font-size: 11px; color: #999; display: flex; justify-content: space-between; }
+
+        /* Print bar */
+        .print-bar { background: #1e3a6e; color: #fff; padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .print-bar h3 { font-size: 14px; font-weight: 600; }
+        .btn-print { background: #fff; color: #1e3a6e; border: none; padding: 7px 20px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-back { background: transparent; color: rgba(255,255,255,.8); border: 1px solid rgba(255,255,255,.35); padding: 7px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; text-decoration: none; }
+
+        @@media print {
+            .print-bar { display: none !important; }
+            body { background: #fff; }
+            .page { padding: 20px 28px; max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Print bar -->
+    <div class="print-bar">
+        <div>
+            <h3>Reporte de Ronda #@Model.Id</h3>
+            <div style="font-size:12px;opacity:.75;">@Model.Edificio?.Nombre — @Model.FechaHora.ToString("dd/MM/yyyy HH:mm")</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+            <a href="/Admin/DetalleRonda/@Model.Id" class="btn-back">← Volver</a>
+            <button class="btn-print" id="btnPrint">🖨 Imprimir / Guardar PDF</button>
+        </div>
+    </div>
+
+    <div class="page">
+
+        <!-- Header -->
+        <div class="report-header">
+            <img src="@Url.Content("~/favicon.png")" alt="Logo" class="report-logo" />
+            <div class="report-title-block">
+                <div class="report-title">Informe de Ronda</div>
+                <div class="report-subtitle">@(Model.Edificio?.Nombre ?? "Edificio") · Sistema de Gestión de Seguridad</div>
+            </div>
+            <div class="report-id">RND-@Model.Id.ToString("D4")</div>
+        </div>
+
+        <!-- Meta grid -->
+        <div class="meta-grid">
+            <div class="meta-cell">
+                <div class="meta-label">Fecha / Hora</div>
+                <div class="meta-value">@Model.FechaHora.ToString("dd/MM/yyyy HH:mm")</div>
+            </div>
+            <div class="meta-cell">
+                <div class="meta-label">Edificio</div>
+                <div class="meta-value">@(Model.Edificio?.Nombre ?? "—")</div>
+            </div>
+            <div class="meta-cell">
+                <div class="meta-label">Operador / Guardia</div>
+                <div class="meta-value">@operador</div>
+            </div>
+            <div class="meta-cell">
+                <div class="meta-label">Cargo</div>
+                <div class="meta-value">@(Model.Guardia?.Cargo ?? "—")</div>
+            </div>
+            <div class="meta-cell">
+                <div class="meta-label">Estado</div>
+                <div class="meta-value">
+                    @{
+                        var estadoColor = Model.Estado switch {
+                            Guardias.Models.EstadoRonda.FirmadaSupervisor => "#2e7d32",
+                            Guardias.Models.EstadoRonda.Finalizada => "#1565c0",
+                            _ => "#e65100"
+                        };
+                    }
+                    <span class="badge" style="background:@estadoColor;color:#fff;">@estadoLabel</span>
+                </div>
+            </div>
+            <div class="meta-cell">
+                <div class="meta-label">Total fotos</div>
+                <div class="meta-value">@totalFotos foto(s)</div>
+            </div>
+            @if (Model.Estado == Guardias.Models.EstadoRonda.FirmadaSupervisor && !string.IsNullOrEmpty(Model.FirmadoPor))
+            {
+                <div class="meta-cell" style="grid-column:span 2;">
+                    <div class="meta-label">Firmado por supervisor</div>
+                    <div class="meta-value" style="color:#2e7d32;">@Model.FirmadoPor — @Model.FechaFirma?.ToString("dd/MM/yyyy HH:mm")</div>
+                </div>
+            }
+        </div>
+
+        <!-- Areas -->
+        <div class="section">
+            <div class="section-title">Áreas revisadas (@areaRondas.Count)</div>
+            <table class="areas-table">
+                <thead>
+                    <tr>
+                        <th>Área</th>
+                        <th>Estado</th>
+                        <th>Fotos</th>
+                        <th>Incidencia</th>
+                        <th>Notas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ar in areaRondas)
+                    {
+                        var areaInc = Model.Incidencias.FirstOrDefault(i => i.AreaRondaId == ar.Id);
+                        <tr>
+                            <td style="font-weight:600;">@ar.Area?.Nombre</td>
+                            <td>
+                                @if (ar.Completada)
+                                {
+                                    <span class="area-status-ok">✓ Completada</span>
+                                }
+                                else
+                                {
+                                    <span class="area-status-pending">Pendiente</span>
+                                }
+                            </td>
+                            <td style="text-align:center;">@ar.Fotos.Count</td>
+                            <td>
+                                @if (areaInc != null)
+                                {
+                                    var incC = areaInc.Severidad switch {
+                                        Guardias.Models.SeveridadIncidencia.Grave => "#c62828",
+                                        Guardias.Models.SeveridadIncidencia.Moderada => "#e65100",
+                                        _ => "#2e7d32"
+                                    };
+                                    var incL = areaInc.Severidad switch {
+                                        Guardias.Models.SeveridadIncidencia.Grave => "Grave",
+                                        Guardias.Models.SeveridadIncidencia.Moderada => "Moderada",
+                                        _ => "Leve"
+                                    };
+                                    <span class="inc-badge" style="background:@(incC + "20");color:@incC;border:1px solid @incC;">@incL</span>
+                                }
+                                else
+                                {
+                                    <span style="color:#999;">—</span>
+                                }
+                            </td>
+                            <td style="color:#555;font-size:12px;">@(ar.Notas ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Incidences detail -->
+        @if (Model.Incidencias.Any())
+        {
+            <div class="section">
+                <div class="section-title">Detalle de incidencias (@Model.Incidencias.Count)</div>
+                @foreach (var inc in Model.Incidencias.OrderByDescending(i => i.Severidad))
+                {
+                    var sevColor = inc.Severidad switch {
+                        Guardias.Models.SeveridadIncidencia.Grave => "#c62828",
+                        Guardias.Models.SeveridadIncidencia.Moderada => "#e65100",
+                        _ => "#2e7d32"
+                    };
+                    var sevLabel = inc.Severidad switch {
+                        Guardias.Models.SeveridadIncidencia.Grave => "Grave",
+                        Guardias.Models.SeveridadIncidencia.Moderada => "Moderada",
+                        _ => "Leve"
+                    };
+                    <div class="inc-row">
+                        <span class="inc-badge" style="background:@(sevColor + "18");color:@sevColor;">@sevLabel</span>
+                        <div class="inc-desc">@inc.Descripcion</div>
+                        @if (!string.IsNullOrWhiteSpace(inc.NotasCierre))
+                        {
+                            <div style="font-size:12px;color:#388e3c;margin-top:3px;">Cierre: @inc.NotasCierre</div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Photos -->
+        @if (totalFotos > 0)
+        {
+            <div class="section">
+                <div class="section-title">Registro fotográfico (@totalFotos foto(s))</div>
+                <div class="photos-grid">
+                    @foreach (var ar in areaRondas.Where(ar => ar.Fotos.Any()))
+                    {
+                        foreach (var foto in ar.Fotos)
+                        {
+                            <div class="photo-item">
+                                <img src="@foto.RutaFoto" alt="@ar.Area?.Nombre" />
+                                <div class="photo-caption">@ar.Area?.Nombre · @foto.FechaCaptura.ToString("dd/MM/yyyy HH:mm")</div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Signatures -->
+        <div class="section" style="margin-top:36px;">
+            <div class="section-title">Firmas</div>
+            <div class="signature-grid">
+                <div>
+                    <div class="signature-space"></div>
+                    <div class="signature-box">
+                        <div class="signature-label">Operador / Guardia</div>
+                        <div class="signature-name">@operador</div>
+                    </div>
+                </div>
+                <div>
+                    <div class="signature-space"></div>
+                    <div class="signature-box">
+                        <div class="signature-label">Supervisor / Responsable</div>
+                        <div class="signature-name">
+                            @if (Model.Estado == Guardias.Models.EstadoRonda.FirmadaSupervisor && !string.IsNullOrEmpty(Model.FirmadoPor))
+                            {
+                                @Model.FirmadoPor
+                            }
+                            else
+                            {
+                                <span>&nbsp;</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="report-footer">
+            <span>@Model.Edificio?.Nombre</span>
+            <span>Generado: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</span>
+        </div>
+
+    </div>
+
+<script>
+    document.getElementById('btnPrint').addEventListener('click', function () {
+        window.print();
+    });
+</script>
+
+</body>
+</html>

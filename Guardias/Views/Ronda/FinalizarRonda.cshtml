@@ -1,0 +1,106 @@
+@model Guardias.Models.Ronda
+@{
+    ViewData["ActiveTab"] = "nueva";
+    var areaRondas = Model.AreaRondas.OrderBy(ar => ar.Area!.Orden).ToList();
+    int totalFotos = areaRondas.Sum(ar => ar.Fotos.Count);
+    int totalInc = Model.Incidencias.Count(i => i.AreaRondaId.HasValue);
+}
+
+<div class="page-header">
+    <h2>Finalizar Ronda</h2>
+    <p>Revisa el resumen antes de finalizar</p>
+</div>
+
+<!-- Round summary -->
+<div class="form-section" style="background:#f5f7ff;margin-bottom:10px;padding:14px 16px;">
+    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--text2);">
+        <span><i class="bi bi-person me-1"></i><strong style="color:var(--text);">@(Model.Guardia?.Nombre ?? Model.NombreOperador)</strong></span>
+        <span><i class="bi bi-building me-1"></i>@Model.Edificio?.Nombre</span>
+        <span><i class="bi bi-clock me-1"></i>@Model.FechaHora.ToString("HH:mm")</span>
+        <span><i class="bi bi-camera me-1"></i>@totalFotos foto(s)</span>
+        @if (totalInc > 0)
+        {
+            <span style="color:var(--orange);font-weight:600;"><i class="bi bi-exclamation-triangle-fill me-1"></i>@totalInc incidencia(s)</span>
+        }
+    </div>
+</div>
+
+<!-- Areas summary -->
+<div class="form-section">
+    <div style="font-weight:600;font-size:15px;margin-bottom:12px;">Áreas revisadas</div>
+    @foreach (var ar in areaRondas)
+    {
+        var areaInc = Model.Incidencias.FirstOrDefault(i => i.AreaRondaId == ar.Id);
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bg);">
+            <div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;
+                        background:@(ar.Completada ? "#e8f5e9" : "#fff3e0");
+                        color:@(ar.Completada ? "#2e7d32" : "#e65100");">
+                <i class="bi bi-@(ar.Completada ? "check-circle-fill" : "clock")"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:14px;font-weight:500;">@ar.Area?.Nombre</div>
+                @if (!string.IsNullOrEmpty(ar.Notas))
+                {
+                    <div style="font-size:12px;color:var(--text2);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@ar.Notas</div>
+                }
+                @if (areaInc != null)
+                {
+                    var incColor = areaInc.Severidad switch {
+                        Guardias.Models.SeveridadIncidencia.Grave => "#c62828",
+                        Guardias.Models.SeveridadIncidencia.Moderada => "#e65100",
+                        _ => "#2e7d32"
+                    };
+                    var incLabel = areaInc.Severidad switch {
+                        Guardias.Models.SeveridadIncidencia.Grave => "Grave",
+                        Guardias.Models.SeveridadIncidencia.Moderada => "Moderada",
+                        _ => "Leve"
+                    };
+                    <div style="margin-top:4px;display:flex;align-items:center;gap:5px;font-size:12px;color:@incColor;">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <span style="font-weight:600;">Incidencia @incLabel:</span>
+                        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@areaInc.Descripcion</span>
+                    </div>
+                }
+            </div>
+            <div style="font-size:12px;color:var(--text2);flex-shrink:0;">
+                @ar.Fotos.Count <i class="bi bi-camera ms-1"></i>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Optional incident report -->
+<form method="post" asp-controller="Ronda" asp-action="FinalizarRonda">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="rondaId" value="@Model.Id" />
+
+    <div class="form-section">
+        <label class="form-label-ios" for="reporteIncidencias">
+            Reporte de incidencia <span style="font-weight:400;color:var(--text2)">(opcional)</span>
+        </label>
+        <textarea id="reporteIncidencias" name="reporteIncidencias" class="form-control-ios"
+                  rows="3" placeholder="Describe cualquier incidencia de la ronda..."
+                  oninput="toggleSeveridad(this.value)"></textarea>
+
+        <div id="severidad-group" style="margin-top:14px;display:none;">
+            <label class="form-label-ios">Severidad</label>
+            <select name="severidad" class="form-control-ios">
+                <option value="0">Leve</option>
+                <option value="1">Moderada</option>
+                <option value="2">Grave</option>
+            </select>
+        </div>
+    </div>
+
+    <button type="submit" class="btn-primary-ios">
+        <i class="bi bi-check-circle-fill"></i> Finalizar ronda
+    </button>
+</form>
+
+@section Scripts {
+<script>
+    function toggleSeveridad(val) {
+        document.getElementById('severidad-group').style.display = val.trim() ? 'block' : 'none';
+    }
+</script>
+}

@@ -1,0 +1,98 @@
+@model Guardias.Models.UsuarioEdificio
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Editar Usuario";
+    ViewData["AdminSection"] = "usuarios";
+    var edificios = ViewBag.EdificiosList as List<Guardias.Models.Edificio>;
+}
+
+<div style="margin-bottom:16px;">
+    <a href="/Admin/Usuarios" class="btn-admin btn-admin-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<div class="admin-card" style="max-width:520px;">
+    <div style="font-weight:600;font-size:17px;margin-bottom:20px;display:flex;align-items:center;gap:8px;">
+        <i class="bi bi-person-gear" style="color:var(--blue);"></i> Editar usuario
+    </div>
+
+    @if (ViewContext.ModelState.ErrorCount > 0)
+    {
+        <div class="alert-ios alert-error" style="margin-bottom:14px;">
+            @foreach (var entry in ViewContext.ModelState.Values)
+            {
+                foreach (var e in entry.Errors)
+                {
+                    <div>@e.ErrorMessage</div>
+                }
+            }
+        </div>
+    }
+
+    <form method="post" asp-controller="Admin" asp-action="EditarUsuario" asp-route-id="@Model.Id">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="Id" value="@Model.Id" />
+
+        <div class="form-admin-group">
+            <label class="form-admin-label">Nombre de usuario <span style="color:red;">*</span></label>
+            <input type="text" name="NombreUsuario" class="form-admin-control"
+                   value="@Model.NombreUsuario" required />
+        </div>
+
+        <div class="form-admin-group">
+            <label class="form-admin-label">Nueva contraseña <span style="font-weight:400;color:var(--text2)">(dejar en blanco para mantener)</span></label>
+            <input type="password" name="nuevaPassword" id="nuevaPassword" class="form-admin-control"
+                   placeholder="Nueva contraseña..." autocomplete="new-password" minlength="4" />
+            @if (!string.IsNullOrEmpty(Model.PasswordPlain))
+            {
+                <div style="margin-top:8px;padding:10px 12px;background:#f0f4ff;border-radius:8px;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                    <span style="color:var(--text2);">Contraseña actual:</span>
+                    <span style="display:flex;align-items:center;gap:8px;">
+                        <span id="passHidden" style="font-family:monospace;letter-spacing:3px;color:var(--text);">••••••••</span>
+                        <span id="passValue" style="font-family:monospace;font-weight:600;color:var(--text);display:none;">@Model.PasswordPlain</span>
+                        <button type="button" onclick="togglePass()"
+                                style="background:none;border:none;cursor:pointer;color:var(--blue);font-size:16px;padding:0;">
+                            <i class="bi bi-eye" id="passIcon"></i>
+                        </button>
+                    </span>
+                </div>
+            }
+        </div>
+
+        <div class="form-admin-group">
+            <label class="form-admin-label">Edificio <span style="color:red;">*</span></label>
+            <select name="EdificioId" class="form-admin-control" required>
+                @foreach (var e in edificios!)
+                {
+                    <option value="@e.Id" selected="@(e.Id == Model.EdificioId)">@e.Nombre</option>
+                }
+            </select>
+        </div>
+
+        <div class="form-admin-group" style="display:flex;align-items:center;gap:10px;">
+            <input type="checkbox" name="Activo" id="activo" value="true"
+                   @(Model.Activo ? "checked" : "") />
+            <label for="activo" style="font-size:14px;margin:0;">Usuario activo</label>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px;">
+            <button type="submit" class="btn-admin btn-admin-primary" style="padding:10px 24px;">
+                <i class="bi bi-floppy"></i> Guardar cambios
+            </button>
+            <a href="/Admin/Usuarios" class="btn-admin btn-admin-secondary" style="padding:10px 20px;">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+    function togglePass() {
+        var v = document.getElementById('passValue');
+        var h = document.getElementById('passHidden');
+        var icon = document.getElementById('passIcon');
+        var visible = v.style.display !== 'none';
+        v.style.display = visible ? 'none' : 'inline';
+        h.style.display = visible ? 'inline' : 'none';
+        icon.className = visible ? 'bi bi-eye' : 'bi bi-eye-slash';
+    }
+</script>
+}

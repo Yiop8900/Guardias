@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\insec\\source\\repos\\Guardias\\Guardias\\Guardias.csproj": {}
+    "C:\\Users\\insec\\source\\repos\\Guardias\\guardias\\Guardias.csproj": {}
   },
   "projects": {
-    "C:\\Users\\insec\\source\\repos\\Guardias\\Guardias\\Guardias.csproj": {
+    "C:\\Users\\insec\\source\\repos\\Guardias\\guardias\\Guardias.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\insec\\source\\repos\\Guardias\\Guardias\\Guardias.csproj",
+        "projectUniqueName": "C:\\Users\\insec\\source\\repos\\Guardias\\guardias\\Guardias.csproj",
         "projectName": "Guardias",
-        "projectPath": "C:\\Users\\insec\\source\\repos\\Guardias\\Guardias\\Guardias.csproj",
+        "projectPath": "C:\\Users\\insec\\source\\repos\\Guardias\\guardias\\Guardias.csproj",
         "packagesPath": "C:\\Users\\insec\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\insec\\source\\repos\\Guardias\\Guardias\\obj\\",
+        "outputPath": "C:\\Users\\insec\\source\\repos\\Guardias\\guardias\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -52,7 +52,15 @@
           "framework": "net10.0",
           "targetAlias": "net10.0",
           "dependencies": {
-            "Microsoft.EntityFrameworkCore.Sqlite": {
+            "CloudinaryDotNet": {
+              "target": "Package",
+              "version": "[1.29.1, )"
+            },
+            "Google.Apis.Drive.v3": {
+              "target": "Package",
+              "version": "[1.74.0.4135, )"
+            },
+            "Microsoft.EntityFrameworkCore.SqlServer": {
               "target": "Package",
               "version": "[9.0.4, )"
             },

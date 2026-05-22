@@ -1,11 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Guardias.Data;
 using Guardias.Models;
 
 namespace Guardias.Controllers;
 
+[Authorize(Roles = "Admin")]
 public class AdminController : Controller
 {
     private readonly AppDbContext _context;
@@ -90,9 +93,9 @@ public class AdminController : Controller
         var guardia = await _context.Guardias.FindAsync(id);
         if (guardia != null)
         {
-            guardia.Activo = false;
+            _context.Guardias.Remove(guardia);
             await _context.SaveChangesAsync();
-            TempData["Success"] = "Guardia desactivado.";
+            TempData["Success"] = "Guardia eliminado correctamente.";
         }
         return RedirectToAction("Guardias");
     }
@@ -149,22 +152,203 @@ public class AdminController : Controller
         var edificio = await _context.Edificios.FindAsync(id);
         if (edificio != null)
         {
-            edificio.Activo = false;
+            _context.Edificios.Remove(edificio);
             await _context.SaveChangesAsync();
-            TempData["Success"] = "Edificio desactivado.";
+            TempData["Success"] = "Edificio eliminado correctamente.";
         }
         return RedirectToAction("Edificios");
     }
 
-    // ===== TAREAS =====
-    public async Task<IActionResult> Tareas()
+    // ===== ÁREAS =====
+    public async Task<IActionResult> Areas(int? edificioId)
     {
-        var tareas = await _context.Tareas
+        var query = _context.Areas.Include(a => a.Edificio).AsQueryable();
+        if (edificioId.HasValue)
+            query = query.Where(a => a.EdificioId == edificioId.Value);
+
+        var areas = await query.OrderBy(a => a.Edificio!.Nombre).ThenBy(a => a.Orden).ToListAsync();
+        await LoadEdificiosViewBag();
+        ViewBag.SelectedEdificio = edificioId;
+        return View(areas);
+    }
+
+    public async Task<IActionResult> CrearArea(int? edificioId)
+    {
+        await LoadEdificiosViewBag();
+        var area = new Area();
+        if (edificioId.HasValue) area.EdificioId = edificioId.Value;
+        return View(area);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CrearArea(Area area)
+    {
+        if (ModelState.IsValid)
+        {
+            _context.Areas.Add(area);
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "Área creada correctamente.";
+            return RedirectToAction("Areas", new { edificioId = area.EdificioId });
+        }
+        await LoadEdificiosViewBag();
+        return View(area);
+    }
+
+    public async Task<IActionResult> EditarArea(int id)
+    {
+        var area = await _context.Areas.FindAsync(id);
+        if (area == null) return NotFound();
+        await LoadEdificiosViewBag();
+        return View(area);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditarArea(int id, Area area)
+    {
+        if (id != area.Id) return BadRequest();
+        if (ModelState.IsValid)
+        {
+            _context.Update(area);
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "Área actualizada.";
+            return RedirectToAction("Areas", new { edificioId = area.EdificioId });
+        }
+        await LoadEdificiosViewBag();
+        return View(area);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EliminarArea(int id)
+    {
+        var area = await _context.Areas.FindAsync(id);
+        if (area != null)
+        {
+            int edificioId = area.EdificioId;
+            _context.Areas.Remove(area);
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "Área eliminada correctamente.";
+            return RedirectToAction("Areas", new { edificioId });
+        }
+        return RedirectToAction("Areas");
+    }
+
+    // ===== USUARIOS =====
+    public async Task<IActionResult> Usuarios()
+    {
+        var usuarios = await _context.UsuariosEdificio
+            .Include(u => u.Edificio)
+            .OrderBy(u => u.Edificio!.Nombre)
+            .ThenBy(u => u.NombreUsuario)
+            .ToListAsync();
+        return View(usuarios);
+    }
+
+    public async Task<IActionResult> CrearUsuario()
+    {
+        await LoadEdificiosViewBag();
+        return View(new UsuarioEdificio());
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CrearUsuario(UsuarioEdificio usuario, string password)
+    {
+        if (string.IsNullOrWhiteSpace(password) || password.Length < 4)
+            ModelState.AddModelError("password", "La contraseña debe tener al menos 4 caracteres.");
+
+        // Check duplicate username
+        if (await _context.UsuariosEdificio.AnyAsync(u => u.NombreUsuario == usuario.NombreUsuario))
+            ModelState.AddModelError("NombreUsuario", "Ya existe un usuario con ese nombre.");
+
+        if (ModelState.IsValid)
+        {
+            var hasher = new PasswordHasher<UsuarioEdificio>();
+            usuario.PasswordHash = hasher.HashPassword(usuario, password);
+            usuario.PasswordPlain = password;
+            _context.UsuariosEdificio.Add(usuario);
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "Usuario creado correctamente.";
+            return RedirectToAction("Usuarios");
+        }
+        await LoadEdificiosViewBag();
+        return View(usuario);
+    }
+
+    public async Task<IActionResult> EditarUsuario(int id)
+    {
+        var usuario = await _context.UsuariosEdificio.FindAsync(id);
+        if (usuario == null) return NotFound();
+        await LoadEdificiosViewBag();
+        return View(usuario);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditarUsuario(int id, UsuarioEdificio usuario, string? nuevaPassword)
+    {
+        // Check duplicate username for other users
+        if (await _context.UsuariosEdificio.AnyAsync(u => u.NombreUsuario == usuario.NombreUsuario && u.Id != id))
+            ModelState.AddModelError("NombreUsuario", "Ya existe un usuario con ese nombre.");
+
+        if (ModelState.IsValid)
+        {
+            var existing = await _context.UsuariosEdificio.FindAsync(id);
+            if (existing == null) return NotFound();
+
+            existing.NombreUsuario = usuario.NombreUsuario;
+            existing.EdificioId = usuario.EdificioId;
+            existing.Activo = usuario.Activo;
+
+            if (!string.IsNullOrWhiteSpace(nuevaPassword) && nuevaPassword.Length >= 4)
+            {
+                var hasher = new PasswordHasher<UsuarioEdificio>();
+                existing.PasswordHash = hasher.HashPassword(existing, nuevaPassword);
+                existing.PasswordPlain = nuevaPassword;
+            }
+
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "Usuario actualizado.";
+            return RedirectToAction("Usuarios");
+        }
+        await LoadEdificiosViewBag();
+        return View(usuario);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EliminarUsuario(int id)
+    {
+        var usuario = await _context.UsuariosEdificio.FindAsync(id);
+        if (usuario != null)
+        {
+            _context.UsuariosEdificio.Remove(usuario);
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "Usuario eliminado correctamente.";
+        }
+        return RedirectToAction("Usuarios");
+    }
+
+    // ===== TAREAS =====
+    public async Task<IActionResult> Tareas(int? edificioId)
+    {
+        var query = _context.Tareas
             .Include(t => t.Guardia)
             .Include(t => t.Edificio)
+            .AsQueryable();
+
+        if (edificioId.HasValue)
+            query = query.Where(t => t.EdificioId == edificioId.Value);
+
+        var tareas = await query
             .OrderBy(t => t.HoraProgramada)
             .ThenBy(t => t.Titulo)
             .ToListAsync();
+
+        await LoadEdificiosViewBag();
+        ViewBag.SelectedEdificio = edificioId;
         return View(tareas);
     }
 
@@ -233,16 +417,51 @@ public class AdminController : Controller
     }
 
     // ===== RONDAS =====
-    public async Task<IActionResult> Rondas()
+    public async Task<IActionResult> Rondas(int? edificioId)
     {
-        var rondas = await _context.Rondas
+        var query = _context.Rondas
             .Include(r => r.Guardia)
             .Include(r => r.Edificio)
-            .Include(r => r.Fotos)
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Fotos)
             .Include(r => r.Incidencias)
+            .AsQueryable();
+
+        if (edificioId.HasValue)
+            query = query.Where(r => r.EdificioId == edificioId.Value);
+
+        var rondas = await query
             .OrderByDescending(r => r.FechaHora)
             .ToListAsync();
+
+        await LoadEdificiosViewBag();
+        ViewBag.SelectedEdificio = edificioId;
         return View(rondas);
+    }
+
+    public async Task<IActionResult> DetalleRonda(int id)
+    {
+        var ronda = await _context.Rondas
+            .Include(r => r.Guardia)
+            .Include(r => r.Edificio)
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Area)
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Fotos)
+            .Include(r => r.Incidencias)
+            .FirstOrDefaultAsync(r => r.Id == id);
+        if (ronda == null) return NotFound();
+        return View(ronda);
+    }
+
+    public async Task<IActionResult> ExportarPdfRonda(int id)
+    {
+        var ronda = await _context.Rondas
+            .Include(r => r.Guardia)
+            .Include(r => r.Edificio)
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Area)
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Fotos)
+            .Include(r => r.Incidencias)
+            .FirstOrDefaultAsync(r => r.Id == id);
+        if (ronda == null) return NotFound();
+        return View(ronda);
     }
 
     public async Task<IActionResult> FirmarRonda(int id)
@@ -250,7 +469,8 @@ public class AdminController : Controller
         var ronda = await _context.Rondas
             .Include(r => r.Guardia)
             .Include(r => r.Edificio)
-            .Include(r => r.Fotos)
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Area)
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Fotos)
             .FirstOrDefaultAsync(r => r.Id == id);
         if (ronda == null) return NotFound();
         return View(ronda);
@@ -269,7 +489,8 @@ public class AdminController : Controller
             var rondaFull = await _context.Rondas
                 .Include(r => r.Guardia)
                 .Include(r => r.Edificio)
-                .Include(r => r.Fotos)
+                .Include(r => r.AreaRondas).ThenInclude(ar => ar.Area)
+                .Include(r => r.AreaRondas).ThenInclude(ar => ar.Fotos)
                 .FirstOrDefaultAsync(r => r.Id == id);
             return View(rondaFull);
         }
@@ -284,15 +505,24 @@ public class AdminController : Controller
     }
 
     // ===== INCIDENCIAS =====
-    public async Task<IActionResult> Incidencias()
+    public async Task<IActionResult> Incidencias(int? edificioId)
     {
-        var incidencias = await _context.Incidencias
+        var query = _context.Incidencias
             .Include(i => i.Ronda)
                 .ThenInclude(r => r!.Guardia)
             .Include(i => i.Ronda)
                 .ThenInclude(r => r!.Edificio)
+            .AsQueryable();
+
+        if (edificioId.HasValue)
+            query = query.Where(i => i.Ronda!.EdificioId == edificioId.Value);
+
+        var incidencias = await query
             .OrderByDescending(i => i.FechaCreacion)
             .ToListAsync();
+
+        await LoadEdificiosViewBag();
+        ViewBag.SelectedEdificio = edificioId;
         return View(incidencias);
     }
 
@@ -306,6 +536,18 @@ public class AdminController : Controller
             .FirstOrDefaultAsync(i => i.Id == id);
         if (incidencia == null) return NotFound();
         return View(incidencia);
+    }
+
+    public async Task<IActionResult> ExportarPdfIncidencia(int id)
+    {
+        var incidencia = await _context.Incidencias
+            .Include(i => i.Ronda).ThenInclude(r => r!.Guardia)
+            .Include(i => i.Ronda).ThenInclude(r => r!.Edificio)
+            .Include(i => i.Ronda).ThenInclude(r => r!.AreaRondas).ThenInclude(ar => ar.Area)
+            .Include(i => i.Ronda).ThenInclude(r => r!.AreaRondas).ThenInclude(ar => ar.Fotos)
+            .FirstOrDefaultAsync(i => i.Id == id);
+        if (incidencia == null) return NotFound();
+        return View("~/Views/Incidencia/ExportarPdf.cshtml", incidencia);
     }
 
     [HttpPost]
@@ -335,6 +577,7 @@ public class AdminController : Controller
             .OrderBy(e => e.Nombre)
             .ToListAsync();
         ViewBag.Edificios = new SelectList(edificios, "Id", "Nombre");
+        ViewBag.EdificiosList = edificios; // List<Edificio> para vistas que iteran manualmente
     }
 
     private async Task LoadGuardiasViewBag()

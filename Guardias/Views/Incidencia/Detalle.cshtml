@@ -3,9 +3,13 @@
     ViewData["ActiveTab"] = "incidencias";
 }
 
-<div style="margin-bottom:12px;">
+<div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
     <a href="/Incidencia" style="color:var(--blue);text-decoration:none;font-size:15px;">
         <i class="bi bi-chevron-left"></i> Incidencias
+    </a>
+    <a href="/Incidencia/ExportarPdf/@Model.Id" target="_blank"
+       style="display:inline-flex;align-items:center;gap:5px;background:var(--blue);color:#fff;padding:7px 14px;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none;">
+        <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
     </a>
 </div>
 

@@ -15,7 +15,7 @@
 
 <div class="form-section" style="margin-bottom:10px;background:#f8f8fc;">
     <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--text2);">
-        <span><i class="bi bi-person me-1"></i><strong style="color:var(--text);">@Model.Guardia?.Nombre</strong></span>
+        <span><i class="bi bi-person me-1"></i><strong style="color:var(--text);">@(Model.Guardia?.Nombre ?? Model.NombreOperador)</strong></span>
         <span><i class="bi bi-building me-1"></i>@Model.Edificio?.Nombre</span>
         <span><i class="bi bi-clock me-1"></i>@Model.FechaHora.ToString("HH:mm")</span>
     </div>
@@ -40,12 +40,16 @@
     <!-- Photos -->
     <div class="form-section">
         <label class="form-label-ios">Fotos de la ronda <span style="color:var(--red)">*</span></label>
-        <div class="photo-zone" id="drop-zone" onclick="document.getElementById('fileInput').click()">
-            <i class="bi bi-camera photo-zone-icon"></i>
-            <p>Tomar foto o seleccionar imagen</p>
-            <p style="font-size:12px;margin-top:4px;">JPG, PNG, WEBP · Máx 10 MB c/u</p>
+        <div class="camera-capture-zone" onclick="document.getElementById('cameraInput').click()">
+            <div class="camera-icon-wrap"><i class="bi bi-camera-fill"></i></div>
+            <span>Tomar foto</span>
         </div>
-        <input type="file" id="fileInput" name="fotos" multiple accept="image/*" onchange="handleFiles(this.files)" />
+        <button type="button" class="gallery-pick-btn" onclick="document.getElementById('galleryInput').click()">
+            <i class="bi bi-images me-1"></i>Elegir desde galería
+        </button>
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handleFiles(this.files)" style="display:none;" />
+        <input type="file" id="galleryInput" accept="image/*" multiple onchange="handleFiles(this.files)" style="display:none;" />
+        <input type="file" id="fileInput" name="fotos" multiple accept="image/*" style="display:none;" />
         <div class="photo-grid" id="photoGrid"></div>
         <div class="photo-required-msg" id="noPhotoMsg">
             <i class="bi bi-exclamation-circle me-1"></i> Debe subir al menos una foto para finalizar la ronda.
@@ -122,7 +126,6 @@ function updateFileInput() {
 function validateForm() {
     if (selectedFiles.length === 0) {
         document.getElementById('noPhotoMsg').classList.add('show');
-        document.getElementById('drop-zone').scrollIntoView({ behavior: 'smooth' });
         return false;
     }
     return true;
@@ -135,16 +138,6 @@ function confirmCancel() {
 // Show severity when report is written
 document.getElementById('reporteIncidencias').addEventListener('input', function() {
     document.getElementById('severidad-group').style.display = this.value.trim() ? 'block' : 'none';
-});
-
-// Drag and drop
-const zone = document.getElementById('drop-zone');
-zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
-zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
-zone.addEventListener('drop', e => {
-    e.preventDefault();
-    zone.classList.remove('drag');
-    handleFiles(e.dataTransfer.files);
 });
 </script>
 }

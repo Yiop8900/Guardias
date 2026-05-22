@@ -27,4 +27,10 @@ public class Edificio
 
     [JsonIgnore]
     public ICollection<Tarea> Tareas { get; set; } = new List<Tarea>();
+
+    [JsonIgnore]
+    public ICollection<Area> Areas { get; set; } = new List<Area>();
+
+    [JsonIgnore]
+    public ICollection<UsuarioEdificio> UsuariosEdificio { get; set; } = new List<UsuarioEdificio>();
 }

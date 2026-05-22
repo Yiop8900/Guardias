@@ -33,7 +33,7 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div>
             <div class="detail-label">Guardia</div>
-            <div class="detail-value">@Model.Guardia?.Nombre</div>
+            <div class="detail-value">@(Model.Guardia?.Nombre ?? Model.NombreOperador ?? "—")</div>
         </div>
         <div>
             <div class="detail-label">Cargo</div>
@@ -53,21 +53,43 @@
     </div>
 </div>
 
-<!-- Photos -->
-@if (Model.Fotos.Any())
+<!-- Areas with photos -->
+@if (Model.AreaRondas.Any())
 {
+    var areaRondas = Model.AreaRondas.OrderBy(ar => ar.Area!.Orden).ToList();
     <div class="detail-section">
-        <div class="detail-label" style="margin-bottom:10px;">Fotos (@Model.Fotos.Count)</div>
-        <div class="detail-photo-grid">
-            @foreach (var foto in Model.Fotos)
-            {
-                <div class="detail-photo">
-                    <a href="@foto.RutaFoto" target="_blank">
-                        <img src="@foto.RutaFoto" alt="Foto ronda" loading="lazy" />
-                    </a>
+        <div class="detail-label" style="margin-bottom:12px;">Áreas revisadas (@areaRondas.Count)</div>
+        @foreach (var ar in areaRondas)
+        {
+            <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--bg);">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <i class="bi bi-@(ar.Completada ? "check-circle-fill" : "clock")"
+                       style="color:@(ar.Completada ? "#2e7d32" : "var(--text2)");font-size:16px;"></i>
+                    <span style="font-weight:600;font-size:15px;">@ar.Area?.Nombre</span>
+                    @if (ar.Fotos.Any())
+                    {
+                        <span style="font-size:12px;color:var(--text2);margin-left:auto;">@ar.Fotos.Count foto(s)</span>
+                    }
                 </div>
-            }
-        </div>
+                @if (!string.IsNullOrEmpty(ar.Notas))
+                {
+                    <p style="font-size:13px;color:var(--text2);margin-bottom:8px;margin-left:24px;">@ar.Notas</p>
+                }
+                @if (ar.Fotos.Any())
+                {
+                    <div class="detail-photo-grid" style="margin-left:24px;">
+                        @foreach (var foto in ar.Fotos)
+                        {
+                            <div class="detail-photo">
+                                <a href="@foto.RutaFoto" target="_blank">
+                                    <img src="@foto.RutaFoto" alt="Foto área" loading="lazy" />
+                                </a>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
     </div>
 }
 

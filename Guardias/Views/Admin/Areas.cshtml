@@ -1,0 +1,90 @@
+@model List<Guardias.Models.Area>
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Áreas";
+    ViewData["AdminSection"] = "areas";
+    ViewData["PageSub"] = "Gestiona las áreas de revisión por edificio";
+    var edificios = ViewBag.EdificiosList as List<Guardias.Models.Edificio>;
+    int? selectedEdificio = ViewBag.SelectedEdificio as int?;
+}
+
+<div class="admin-toolbar">
+    <form method="get" asp-action="Areas" style="display:flex;gap:8px;align-items:center;flex:1;">
+        <select name="edificioId" class="form-admin-control" style="min-width:180px;" onchange="this.form.submit()"
+                asp-items="@(new SelectList(edificios ?? new(), "Id", "Nombre", selectedEdificio))">
+            <option value="">Todos los edificios</option>
+        </select>
+        @if (selectedEdificio.HasValue)
+        {
+            <a href="/Admin/Areas" class="btn-admin btn-admin-secondary" style="padding:8px 14px;white-space:nowrap;">
+                <i class="bi bi-x"></i> Quitar filtro
+            </a>
+        }
+    </form>
+    <a href="/Admin/CrearArea" class="btn-admin btn-admin-primary">
+        <i class="bi bi-plus-lg"></i> Nueva área
+    </a>
+</div>
+
+<div class="admin-card" style="padding:0;overflow:hidden;">
+    @if (!Model.Any())
+    {
+        <div style="padding:40px;text-align:center;color:var(--text2);">
+            <i class="bi bi-map" style="font-size:40px;display:block;margin-bottom:10px;"></i>
+            No hay áreas definidas.
+        </div>
+    }
+    else
+    {
+        <div class="table-scroll-wrap">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Orden</th>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Edificio</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var area in Model.OrderBy(a => a.EdificioId).ThenBy(a => a.Orden))
+                {
+                    <tr>
+                        <td style="color:var(--text2);font-size:13px;">@area.Orden</td>
+                        <td style="font-weight:500;">@area.Nombre</td>
+                        <td style="color:var(--text2);font-size:13px;">@(area.Descripcion ?? "—")</td>
+                        <td>@area.Edificio?.Nombre</td>
+                        <td>
+                            @if (area.Activo)
+                            {
+                                <span class="badge-ios badge-done">Activa</span>
+                            }
+                            else
+                            {
+                                <span class="badge-ios" style="background:#f5f5f5;color:var(--text2);">Inactiva</span>
+                            }
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                <a href="/Admin/EditarArea/@area.Id" class="btn-admin btn-admin-secondary" style="padding:6px 12px;font-size:13px;">
+                                    <i class="bi bi-pencil"></i> Editar
+                                </a>
+                                <form id="del-area-@area.Id" method="post" asp-controller="Admin" asp-action="EliminarArea">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@area.Id" />
+                                    <button type="button" class="btn-admin btn-admin-danger" style="padding:6px 12px;font-size:13px;"
+                                            onclick="confirmarEliminar('del-area-@area.Id','¿Eliminar área?','Se eliminará @area.Nombre de forma permanente.')">
+                                        <i class="bi bi-trash"></i> Eliminar
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    }
+</div>

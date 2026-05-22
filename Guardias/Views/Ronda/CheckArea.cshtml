@@ -1,0 +1,265 @@
+@model Guardias.Models.Ronda
+@{
+    ViewData["ActiveTab"] = "nueva";
+    int index = (int)ViewBag.Index;
+    int total = (int)ViewBag.Total;
+    int rondaId = (int)ViewBag.RondaId;
+    int areaRondaId = (int)ViewBag.AreaRondaId;
+    string areaNombre = ViewBag.AreaNombre ?? "Área";
+    string? areaDesc = ViewBag.AreaDescripcion;
+    int completed = (int)ViewBag.CompletedCount;
+}
+
+<div class="page-header">
+    <h2>Revisión de Área</h2>
+    <p>Área @(index + 1) de @total</p>
+</div>
+
+<!-- Progress bar -->
+<div class="progress-steps" style="margin-bottom:20px;">
+    @for (int i = 0; i < total; i++)
+    {
+        <div class="progress-step @(i < completed ? "done" : i == index ? "done" : "")"></div>
+    }
+</div>
+
+<!-- Round info -->
+<div class="form-section" style="background:#f5f7ff;margin-bottom:10px;padding:12px 16px;">
+    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--text2);">
+        <span><i class="bi bi-person me-1"></i><strong style="color:var(--text);">@(Model.Guardia?.Nombre ?? Model.NombreOperador)</strong></span>
+        <span><i class="bi bi-building me-1"></i>@Model.Edificio?.Nombre</span>
+        <span><i class="bi bi-clock me-1"></i>@Model.FechaHora.ToString("HH:mm")</span>
+    </div>
+</div>
+
+<!-- Area info -->
+<div class="form-section" style="margin-bottom:10px;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:@(string.IsNullOrEmpty(areaDesc) ? "0" : "8px");">
+        <div style="width:40px;height:40px;background:var(--blue);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex-shrink:0;">
+            <i class="bi bi-map"></i>
+        </div>
+        <div>
+            <div style="font-weight:700;font-size:17px;">@areaNombre</div>
+            @if (!string.IsNullOrEmpty(areaDesc))
+            {
+                <div style="font-size:13px;color:var(--text2);">@areaDesc</div>
+            }
+        </div>
+    </div>
+</div>
+
+@if (ViewContext.ModelState.ErrorCount > 0)
+{
+    <div class="alert-ios alert-error" style="margin-bottom:12px;">
+        @foreach (var entry in ViewContext.ModelState.Values)
+        {
+            foreach (var err in entry.Errors)
+            {
+                <div><i class="bi bi-exclamation-circle me-1"></i>@err.ErrorMessage</div>
+            }
+        }
+    </div>
+}
+
+<form method="post" enctype="multipart/form-data"
+      asp-controller="Ronda" asp-action="CheckArea" id="area-form">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="rondaId" value="@rondaId" />
+    <input type="hidden" name="areaRondaId" value="@areaRondaId" />
+    <input type="hidden" name="index" value="@index" />
+
+    <!-- Photo upload -->
+    <div class="form-section">
+        <label class="form-label-ios">
+            Foto del área <span style="color:var(--red)">*</span>
+        </label>
+        <div class="camera-capture-zone" onclick="document.getElementById('cameraInput').click()">
+            <div class="camera-icon-wrap"><i class="bi bi-camera-fill"></i></div>
+            <span>Tomar foto</span>
+        </div>
+        <button type="button" class="gallery-pick-btn" onclick="document.getElementById('galleryInput').click()">
+            <i class="bi bi-images me-1"></i>Elegir desde galería
+        </button>
+        <!-- cameraInput: abre la cámara directamente en móvil -->
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handleFiles(this.files)" style="display:none;" />
+        <!-- galleryInput: abre el selector de archivos -->
+        <input type="file" id="galleryInput" accept="image/*" multiple onchange="handleFiles(this.files)" style="display:none;" />
+        <!-- fileInput: se sincroniza por JS y se envía con el formulario -->
+        <input type="file" id="fileInput" name="fotos" multiple accept="image/*" style="display:none;" />
+        <div class="photo-grid" id="photoGrid"></div>
+    </div>
+
+    <!-- Notes -->
+    <div class="form-section">
+        <label class="form-label-ios" for="notas">
+            Observaciones <span style="font-weight:400;color:var(--text2)">(opcional)</span>
+        </label>
+        <textarea id="notas" name="notas" class="form-control-ios" rows="3"
+                  placeholder="Novedades, observaciones del área..."></textarea>
+    </div>
+
+    <!-- Per-area incident -->
+    <div class="form-section" id="inc-toggle-bar"
+         style="cursor:pointer;user-select:none;background:#fff8f2;border:1.5px solid #ffe0c2;border-radius:14px;padding:14px 16px;"
+         onclick="toggleInc()">
+        <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:36px;height:36px;border-radius:10px;background:#ffe0c2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-exclamation-triangle-fill" style="color:var(--orange);font-size:17px;"></i>
+            </div>
+            <div style="flex:1;">
+                <div style="font-weight:600;font-size:15px;">Reportar incidencia en esta área</div>
+                <div style="font-size:13px;color:var(--text2);">¿Encontraste algún problema aquí?</div>
+            </div>
+            <i class="bi bi-chevron-down" id="inc-chevron" style="color:var(--text2);transition:transform .2s;"></i>
+        </div>
+    </div>
+
+    <div id="inc-section" style="display:none;margin-top:-10px;">
+        <div class="form-section" style="border:2px solid #ffe0c2;border-top:none;border-radius:0 0 14px 14px;padding-top:16px;">
+            <label class="form-label-ios" for="incDescripcion">Descripción del problema</label>
+            <textarea id="incDescripcion" name="incDescripcion" class="form-control-ios" rows="3"
+                      placeholder="Describe qué encontraste en esta área..."></textarea>
+
+            <label class="form-label-ios" style="margin-top:14px;">Severidad</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px;">
+                <label style="cursor:pointer;">
+                    <input type="radio" name="incSeveridad" value="0" style="display:none;" class="sev-radio" onchange="updateSev()" checked />
+                    <div class="sev-btn" data-val="0" style="text-align:center;padding:10px 6px;border-radius:10px;border:2px solid #c8e6c9;background:#f1f8e9;font-size:13px;font-weight:600;color:#2e7d32;">
+                        <i class="bi bi-circle me-1"></i>Leve
+                    </div>
+                </label>
+                <label style="cursor:pointer;">
+                    <input type="radio" name="incSeveridad" value="1" style="display:none;" class="sev-radio" onchange="updateSev()" />
+                    <div class="sev-btn" data-val="1" style="text-align:center;padding:10px 6px;border-radius:10px;border:2px solid #ffe0b2;background:#fff8f0;font-size:13px;font-weight:600;color:#e65100;">
+                        <i class="bi bi-exclamation-circle me-1"></i>Moderada
+                    </div>
+                </label>
+                <label style="cursor:pointer;">
+                    <input type="radio" name="incSeveridad" value="2" style="display:none;" class="sev-radio" onchange="updateSev()" />
+                    <div class="sev-btn" data-val="2" style="text-align:center;padding:10px 6px;border-radius:10px;border:2px solid #ffcdd2;background:#fff5f5;font-size:13px;font-weight:600;color:#c62828;">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Grave
+                    </div>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="btn-row">
+        @if (index == 0)
+        {
+            <a href="/Ronda/Historial" class="btn-secondary-ios">
+                <i class="bi bi-x"></i> Cancelar
+            </a>
+        }
+        else
+        {
+            <a href="/Ronda/CheckArea?rondaId=@rondaId&index=@(index - 1)" class="btn-secondary-ios">
+                <i class="bi bi-arrow-left"></i> Atrás
+            </a>
+        }
+        <button type="submit" class="btn-primary-ios" id="btn-siguiente" onclick="return validateArea()">
+            @if (index + 1 < total)
+            {
+                <text><i class="bi bi-arrow-right"></i> Siguiente área</text>
+            }
+            else
+            {
+                <text><i class="bi bi-check-circle"></i> Completar áreas</text>
+            }
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    let selectedFiles = [];
+
+    function handleFiles(files) {
+        for (const file of files) {
+            if (!file.type.startsWith('image/')) continue;
+            selectedFiles.push(file);
+        }
+        updateFileInput();
+        renderThumbs();
+    }
+
+    function updateFileInput() {
+        const dt = new DataTransfer();
+        selectedFiles.forEach(f => dt.items.add(f));
+        document.getElementById('fileInput').files = dt.files;
+    }
+
+    function renderThumbs() {
+        const grid = document.getElementById('photoGrid');
+        grid.innerHTML = '';
+        selectedFiles.forEach((file, i) => {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const div = document.createElement('div');
+                div.className = 'photo-thumb';
+                div.innerHTML = `<img src="${e.target.result}" alt="foto"/>
+                    <button class="remove-btn" type="button" onclick="removeFile(${i})">×</button>`;
+                grid.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function removeFile(i) {
+        selectedFiles.splice(i, 1);
+        updateFileInput();
+        renderThumbs();
+    }
+
+    function validateArea() {
+        if (selectedFiles.length === 0) {
+            alert('Debe subir al menos una foto del área.');
+            return false;
+        }
+        return true;
+    }
+
+    // Incident toggle
+    let incOpen = false;
+    function toggleInc() {
+        incOpen = !incOpen;
+        document.getElementById('inc-section').style.display = incOpen ? 'block' : 'none';
+        document.getElementById('inc-chevron').style.transform = incOpen ? 'rotate(180deg)' : '';
+        if (!incOpen) {
+            document.getElementById('incDescripcion').value = '';
+            document.querySelectorAll('.sev-radio')[0].checked = true;
+            updateSev();
+        }
+    }
+
+    // Severity visual selection
+    const sevColors = [
+        { border: '#c8e6c9', bg: '#f1f8e9', color: '#2e7d32' },
+        { border: '#ffe0b2', bg: '#fff8f0', color: '#e65100' },
+        { border: '#ffcdd2', bg: '#fff5f5', color: '#c62828' }
+    ];
+    function updateSev() {
+        document.querySelectorAll('.sev-radio').forEach((radio, i) => {
+            const btn = document.querySelectorAll('.sev-btn')[i];
+            const c = sevColors[i];
+            if (radio.checked) {
+                btn.style.border = `2px solid ${c.color}`;
+                btn.style.background = c.bg;
+                btn.style.boxShadow = `0 0 0 3px ${c.border}`;
+            } else {
+                btn.style.border = `2px solid ${c.border}`;
+                btn.style.background = c.bg;
+                btn.style.boxShadow = 'none';
+            }
+        });
+    }
+    // Click on visual button activates the radio
+    document.querySelectorAll('.sev-btn').forEach((btn, i) => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.sev-radio')[i].checked = true;
+            updateSev();
+        });
+    });
+    updateSev();
+</script>
+}

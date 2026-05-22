@@ -1,31 +1,42 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using Guardias.Data;
 using Guardias.Models;
+using Guardias.Services;
 
 namespace Guardias.Controllers;
 
+[Authorize(Roles = "Guardia")]
 public class RondaController : Controller
 {
     private readonly AppDbContext _context;
     private readonly IWebHostEnvironment _env;
+    private readonly CloudinaryService _driveService;
     private static readonly string[] AllowedImageTypes = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
-    private const long MaxFileSize = 10 * 1024 * 1024; // 10 MB
+    private const long MaxFileSize = 10 * 1024 * 1024;
 
-    public RondaController(AppDbContext context, IWebHostEnvironment env)
+    public RondaController(AppDbContext context, IWebHostEnvironment env, CloudinaryService driveService)
     {
         _context = context;
         _env = env;
+        _driveService = driveService;
     }
+
+    private int GetEdificioId() =>
+        int.TryParse(User.FindFirstValue("EdificioId"), out var id) ? id : 0;
 
     // GET: /Ronda/Historial
     public async Task<IActionResult> Historial()
     {
+        int edificioId = GetEdificioId();
         var rondas = await _context.Rondas
             .Include(r => r.Guardia)
             .Include(r => r.Edificio)
-            .Include(r => r.Fotos)
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Fotos)
             .Include(r => r.Incidencias)
+            .Where(r => r.EdificioId == edificioId)
             .OrderByDescending(r => r.FechaHora)
             .ToListAsync();
 
@@ -35,9 +46,9 @@ public class RondaController : Controller
     // GET: /Ronda/Nueva
     public async Task<IActionResult> Nueva()
     {
+        int edificioId = GetEdificioId();
         var guardias = await _context.Guardias
-            .Where(g => g.Activo)
-            .Include(g => g.Edificio)
+            .Where(g => g.Activo && g.EdificioId == edificioId)
             .OrderBy(g => g.Nombre)
             .ToListAsync();
 
@@ -48,28 +59,39 @@ public class RondaController : Controller
     // POST: /Ronda/Nueva
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Nueva(int guardiaId)
+    public async Task<IActionResult> Nueva(int? guardiaId)
     {
-        var guardia = await _context.Guardias
-            .Include(g => g.Edificio)
-            .FirstOrDefaultAsync(g => g.Id == guardiaId && g.Activo);
+        int edificioId = GetEdificioId();
 
-        if (guardia == null)
+        Guardia? guardia = null;
+        if (guardiaId.HasValue)
         {
-            ModelState.AddModelError("", "Guardia no encontrado o inactivo.");
-            var guardias = await _context.Guardias
-                .Where(g => g.Activo)
-                .Include(g => g.Edificio)
-                .OrderBy(g => g.Nombre)
-                .ToListAsync();
-            ViewBag.Guardias = guardias;
-            return View();
+            guardia = await _context.Guardias
+                .FirstOrDefaultAsync(g => g.Id == guardiaId.Value && g.Activo && g.EdificioId == edificioId);
+
+            if (guardia == null)
+            {
+                ModelState.AddModelError("", "Guardia no encontrado.");
+                var lista = await _context.Guardias
+                    .Where(g => g.Activo && g.EdificioId == edificioId)
+                    .OrderBy(g => g.Nombre).ToListAsync();
+                ViewBag.Guardias = lista;
+                return View();
+            }
         }
+
+        // Redirect to existing in-progress ronda
+        var existing = await _context.Rondas
+            .Include(r => r.AreaRondas)
+            .FirstOrDefaultAsync(r => r.EdificioId == edificioId && r.Estado == EstadoRonda.EnCurso);
+        if (existing != null)
+            return RedirectToAction("CheckArea", new { rondaId = existing.Id, index = 0 });
 
         var ronda = new Ronda
         {
-            GuardiaId = guardia.Id,
-            EdificioId = guardia.EdificioId,
+            GuardiaId = guardia?.Id,
+            NombreOperador = guardia?.Nombre ?? User.Identity?.Name,
+            EdificioId = edificioId,
             FechaHora = DateTime.Now,
             Estado = EstadoRonda.EnCurso
         };
@@ -77,67 +99,190 @@ public class RondaController : Controller
         _context.Rondas.Add(ronda);
         await _context.SaveChangesAsync();
 
-        return RedirectToAction("NuevaFotos", new { id = ronda.Id });
+        // Create AreaRonda entries for each active area of this building
+        var areas = await _context.Areas
+            .Where(a => a.EdificioId == edificioId && a.Activo)
+            .OrderBy(a => a.Orden)
+            .ToListAsync();
+
+        foreach (var area in areas)
+        {
+            _context.AreaRondas.Add(new AreaRonda
+            {
+                RondaId = ronda.Id,
+                AreaId = area.Id,
+                Completada = false
+            });
+        }
+        await _context.SaveChangesAsync();
+
+        return RedirectToAction("CheckArea", new { rondaId = ronda.Id, index = 0 });
     }
 
-    // GET: /Ronda/NuevaFotos/5
-    public async Task<IActionResult> NuevaFotos(int id)
+    // GET: /Ronda/CheckArea?rondaId=5&index=0
+    public async Task<IActionResult> CheckArea(int rondaId, int index = 0)
     {
+        int edificioId = GetEdificioId();
         var ronda = await _context.Rondas
             .Include(r => r.Guardia)
             .Include(r => r.Edificio)
-            .Include(r => r.Fotos)
-            .FirstOrDefaultAsync(r => r.Id == id);
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Area)
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Fotos)
+            .FirstOrDefaultAsync(r => r.Id == rondaId && r.EdificioId == edificioId);
 
         if (ronda == null) return NotFound();
         if (ronda.Estado != EstadoRonda.EnCurso) return RedirectToAction("Historial");
 
+        var areaRondas = ronda.AreaRondas.OrderBy(ar => ar.Area!.Orden).ToList();
+
+        if (!areaRondas.Any() || index >= areaRondas.Count)
+            return RedirectToAction("FinalizarRonda", new { rondaId });
+
+        var current = areaRondas[index];
+        ViewBag.Index = index;
+        ViewBag.Total = areaRondas.Count;
+        ViewBag.RondaId = rondaId;
+        ViewBag.AreaRondaId = current.Id;
+        ViewBag.AreaNombre = current.Area?.Nombre;
+        ViewBag.AreaDescripcion = current.Area?.Descripcion;
+        ViewBag.CompletedCount = areaRondas.Count(ar => ar.Completada);
         return View(ronda);
     }
 
-    // POST: /Ronda/NuevaFotos/5
+    // POST: /Ronda/CheckArea
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [RequestSizeLimit(52_428_800)] // 50 MB total
-    public async Task<IActionResult> NuevaFotos(int id, List<IFormFile> fotos, string? reporteIncidencias, SeveridadIncidencia severidad = SeveridadIncidencia.Leve)
+    [RequestSizeLimit(52_428_800)]
+    public async Task<IActionResult> CheckArea(int rondaId, int areaRondaId, int index, List<IFormFile> fotos, string? notas,
+        string? incDescripcion, SeveridadIncidencia incSeveridad = SeveridadIncidencia.Leve)
     {
+        int edificioId = GetEdificioId();
         var ronda = await _context.Rondas
-            .Include(r => r.Guardia)
-            .Include(r => r.Edificio)
-            .Include(r => r.Fotos)
-            .FirstOrDefaultAsync(r => r.Id == id);
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Area)
+            .FirstOrDefaultAsync(r => r.Id == rondaId && r.EdificioId == edificioId);
 
         if (ronda == null) return NotFound();
+
+        var areaRonda = await _context.AreaRondas.FindAsync(areaRondaId);
+        if (areaRonda == null || areaRonda.RondaId != rondaId) return NotFound();
 
         var validFotos = fotos?.Where(f => f.Length > 0).ToList() ?? new List<IFormFile>();
         if (!validFotos.Any())
         {
-            ModelState.AddModelError("fotos", "Debe subir al menos una foto para finalizar la ronda.");
-            return View(ronda);
+            ModelState.AddModelError("fotos", "Debe subir al menos una foto del área.");
+            var rondaReload = await _context.Rondas
+                .Include(r => r.Guardia)
+                .Include(r => r.Edificio)
+                .Include(r => r.AreaRondas).ThenInclude(ar => ar.Area)
+                .Include(r => r.AreaRondas).ThenInclude(ar => ar.Fotos)
+                .FirstOrDefaultAsync(r => r.Id == rondaId);
+            var arReload = rondaReload!.AreaRondas.OrderBy(ar => ar.Area!.Orden).ToList();
+            var cur = arReload[index];
+            ViewBag.Index = index;
+            ViewBag.Total = arReload.Count;
+            ViewBag.RondaId = rondaId;
+            ViewBag.AreaRondaId = cur.Id;
+            ViewBag.AreaNombre = cur.Area?.Nombre;
+            ViewBag.AreaDescripcion = cur.Area?.Descripcion;
+            ViewBag.CompletedCount = arReload.Count(ar => ar.Completada);
+            return View(rondaReload);
         }
 
         var uploadsDir = Path.Combine(_env.WebRootPath, "uploads", "fotos");
-        Directory.CreateDirectory(uploadsDir);
 
         foreach (var foto in validFotos)
         {
             var ext = Path.GetExtension(foto.FileName).ToLowerInvariant();
-            if (!AllowedImageTypes.Contains(ext) || foto.Length > MaxFileSize)
-                continue;
+            if (!AllowedImageTypes.Contains(ext) || foto.Length > MaxFileSize) continue;
 
-            var fileName = Guid.NewGuid().ToString("N") + ext;
-            var filePath = Path.Combine(uploadsDir, fileName);
+            string rutaFoto;
+            string? driveFileId = null;
 
-            await using var stream = new FileStream(filePath, FileMode.Create);
-            await foto.CopyToAsync(stream);
+            if (_driveService.IsConfigured)
+            {
+                // Subir a Google Drive
+                var fileName = Guid.NewGuid().ToString("N") + ext;
+                await using var ms = new MemoryStream();
+                await foto.CopyToAsync(ms);
+                ms.Position = 0;
+                var (fileId, url) = await _driveService.UploadAsync(ms, fileName, foto.ContentType);
+                rutaFoto = url;
+                driveFileId = fileId;
+            }
+            else
+            {
+                // Fallback: guardar localmente
+                Directory.CreateDirectory(uploadsDir);
+                var fileName = Guid.NewGuid().ToString("N") + ext;
+                var filePath = Path.Combine(uploadsDir, fileName);
+                await using var stream = new FileStream(filePath, FileMode.Create);
+                await foto.CopyToAsync(stream);
+                rutaFoto = $"/uploads/fotos/{fileName}";
+            }
 
             _context.FotosRonda.Add(new FotoRonda
             {
-                RondaId = id,
-                RutaFoto = $"/uploads/fotos/{fileName}",
+                AreaRondaId = areaRondaId,
+                RutaFoto = rutaFoto,
+                DriveFileId = driveFileId,
                 FechaCaptura = DateTime.Now
             });
         }
+
+        areaRonda.Completada = true;
+        areaRonda.Notas = notas;
+        areaRonda.FechaCompletada = DateTime.Now;
+
+        if (!string.IsNullOrWhiteSpace(incDescripcion))
+        {
+            _context.Incidencias.Add(new Incidencia
+            {
+                RondaId = rondaId,
+                AreaRondaId = areaRondaId,
+                Descripcion = incDescripcion.Trim(),
+                Severidad = incSeveridad,
+                Estado = EstadoIncidencia.Abierta,
+                FechaCreacion = DateTime.Now
+            });
+        }
+
+        await _context.SaveChangesAsync();
+
+        int totalAreas = ronda.AreaRondas.Count;
+        int nextIndex = index + 1;
+        if (nextIndex < totalAreas)
+            return RedirectToAction("CheckArea", new { rondaId, index = nextIndex });
+
+        return RedirectToAction("FinalizarRonda", new { rondaId });
+    }
+
+    // GET: /Ronda/FinalizarRonda?rondaId=5
+    public async Task<IActionResult> FinalizarRonda(int rondaId)
+    {
+        int edificioId = GetEdificioId();
+        var ronda = await _context.Rondas
+            .Include(r => r.Guardia)
+            .Include(r => r.Edificio)
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Area)
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Fotos)
+            .Include(r => r.Incidencias)
+            .FirstOrDefaultAsync(r => r.Id == rondaId && r.EdificioId == edificioId);
+
+        if (ronda == null) return NotFound();
+        if (ronda.Estado != EstadoRonda.EnCurso) return RedirectToAction("Historial");
+        return View(ronda);
+    }
+
+    // POST: /Ronda/FinalizarRonda
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> FinalizarRonda(int rondaId, string? reporteIncidencias, SeveridadIncidencia severidad = SeveridadIncidencia.Leve)
+    {
+        int edificioId = GetEdificioId();
+        var ronda = await _context.Rondas
+            .FirstOrDefaultAsync(r => r.Id == rondaId && r.EdificioId == edificioId);
+
+        if (ronda == null) return NotFound();
 
         ronda.Estado = EstadoRonda.Finalizada;
         ronda.ReporteIncidencias = reporteIncidencias;
@@ -146,7 +291,7 @@ public class RondaController : Controller
         {
             _context.Incidencias.Add(new Incidencia
             {
-                RondaId = id,
+                RondaId = rondaId,
                 Descripcion = reporteIncidencias,
                 Severidad = severidad,
                 Estado = EstadoIncidencia.Abierta,
@@ -155,20 +300,24 @@ public class RondaController : Controller
         }
 
         await _context.SaveChangesAsync();
+        TempData["Success"] = "Ronda finalizada correctamente.";
         return RedirectToAction("Historial");
     }
 
     // GET: /Ronda/Detalle/5
     public async Task<IActionResult> Detalle(int id)
     {
+        int edificioId = GetEdificioId();
         var ronda = await _context.Rondas
             .Include(r => r.Guardia)
             .Include(r => r.Edificio)
-            .Include(r => r.Fotos)
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Area)
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Fotos)
             .Include(r => r.Incidencias)
-            .FirstOrDefaultAsync(r => r.Id == id);
+            .FirstOrDefaultAsync(r => r.Id == id && r.EdificioId == edificioId);
 
         if (ronda == null) return NotFound();
         return View(ronda);
     }
 }
+

@@ -1,0 +1,194 @@
+@model Guardias.Models.Ronda
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = $"Ronda #{Model.Id}";
+    ViewData["AdminSection"] = "rondas";
+    ViewData["PageSub"] = "Detalle de la ronda";
+    var areaRondas = Model.AreaRondas.OrderBy(ar => ar.Area!.Orden).ToList();
+    int totalFotos = areaRondas.Sum(ar => ar.Fotos.Count);
+    var operador = Model.Guardia?.Nombre ?? Model.NombreOperador ?? "—";
+}
+
+<!-- Toolbar -->
+<div class="admin-toolbar" style="margin-bottom:16px;">
+    <a href="/Admin/Rondas" class="btn-admin btn-admin-secondary" style="padding:8px 14px;">
+        <i class="bi bi-chevron-left"></i> Volver a Rondas
+    </a>
+    <div style="margin-left:auto;display:flex;gap:8px;">
+        @if (Model.Estado == Guardias.Models.EstadoRonda.Finalizada)
+        {
+            <a href="/Admin/FirmarRonda/@Model.Id" class="btn-admin btn-admin-primary" style="padding:8px 16px;">
+                <i class="bi bi-pen"></i> Firmar ronda
+            </a>
+        }
+        <a href="/Admin/ExportarPdfRonda/@Model.Id" target="_blank" class="btn-admin" style="padding:8px 16px;background:#1e3a6e;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;display:inline-flex;align-items:center;gap:6px;">
+            <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
+        </a>
+    </div>
+</div>
+
+<div class="admin-detail-grid">
+
+    <!-- Left column: info + areas -->
+    <div>
+        <!-- Round info -->
+        <div class="admin-card" style="margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <div>
+                    <div style="font-size:22px;font-weight:700;">Ronda #@Model.Id</div>
+                    <div style="font-size:14px;color:var(--text2);margin-top:2px;">
+                        @Model.FechaHora.ToString("dd 'de' MMMM yyyy, HH:mm", new System.Globalization.CultureInfo("es-ES"))
+                    </div>
+                </div>
+                @switch (Model.Estado)
+                {
+                    case Guardias.Models.EstadoRonda.EnCurso:
+                        <span class="badge-ios badge-running" style="font-size:13px;">En curso</span>
+                        break;
+                    case Guardias.Models.EstadoRonda.Finalizada:
+                        <span class="badge-ios badge-done" style="font-size:13px;">Finalizada</span>
+                        break;
+                    case Guardias.Models.EstadoRonda.FirmadaSupervisor:
+                        <span class="badge-ios badge-signed" style="font-size:13px;">Firmada</span>
+                        break;
+                }
+            </div>
+            <div class="admin-2col" style="gap:12px;">
+                <div>
+                    <div class="admin-label" style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin-bottom:3px;">Operador / Guardia</div>
+                    <div style="font-weight:600;">@operador</div>
+                </div>
+                <div>
+                    <div class="admin-label" style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin-bottom:3px;">Edificio</div>
+                    <div style="font-weight:600;">@Model.Edificio?.Nombre</div>
+                </div>
+                <div>
+                    <div class="admin-label" style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin-bottom:3px;">Cargo</div>
+                    <div>@(Model.Guardia?.Cargo ?? "—")</div>
+                </div>
+                <div>
+                    <div class="admin-label" style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin-bottom:3px;">Fotos totales</div>
+                    <div>@totalFotos foto(s)</div>
+                </div>
+                @if (Model.Estado == Guardias.Models.EstadoRonda.FirmadaSupervisor)
+                {
+                    <div style="grid-column:span 2;background:#e8f5e9;border-radius:8px;padding:10px 14px;">
+                        <div class="admin-label" style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#388e3c;margin-bottom:3px;">Firmado por</div>
+                        <div style="font-weight:600;color:#1b5e20;">@Model.FirmadoPor — @Model.FechaFirma?.ToString("dd/MM/yyyy HH:mm")</div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Areas -->
+        <div class="admin-card" style="padding:0;overflow:hidden;">
+            <div style="padding:14px 20px;border-bottom:1px solid var(--bg);font-weight:600;font-size:15px;">
+                Áreas revisadas <span style="color:var(--text2);font-weight:400;">(@areaRondas.Count)</span>
+            </div>
+            @foreach (var ar in areaRondas)
+            {
+                var areaInc = Model.Incidencias.FirstOrDefault(i => i.AreaRondaId == ar.Id);
+                <div style="padding:12px 20px;border-bottom:1px solid var(--bg);display:flex;align-items:flex-start;gap:10px;">
+                    <div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-top:2px;
+                                background:@(ar.Completada ? "#e8f5e9" : "#fff3e0");
+                                color:@(ar.Completada ? "#2e7d32" : "#e65100");">
+                        <i class="bi bi-@(ar.Completada ? "check-circle-fill" : "clock")"></i>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:600;font-size:14px;">@ar.Area?.Nombre</div>
+                        @if (!string.IsNullOrEmpty(ar.Notas))
+                        {
+                            <div style="font-size:13px;color:var(--text2);margin-top:2px;">@ar.Notas</div>
+                        }
+                        @if (areaInc != null)
+                        {
+                            var incColor = areaInc.Severidad switch {
+                                Guardias.Models.SeveridadIncidencia.Grave => "#c62828",
+                                Guardias.Models.SeveridadIncidencia.Moderada => "#e65100",
+                                _ => "#2e7d32"
+                            };
+                            var incLabel = areaInc.Severidad switch {
+                                Guardias.Models.SeveridadIncidencia.Grave => "Grave",
+                                Guardias.Models.SeveridadIncidencia.Moderada => "Moderada",
+                                _ => "Leve"
+                            };
+                            <div style="margin-top:5px;display:inline-flex;align-items:center;gap:5px;font-size:12px;color:@incColor;background:@(incColor + "18");padding:3px 9px;border-radius:20px;font-weight:600;">
+                                <i class="bi bi-exclamation-triangle-fill"></i> Incidencia @incLabel
+                            </div>
+                        }
+                    </div>
+                    <div style="font-size:12px;color:var(--text2);flex-shrink:0;margin-top:4px;">
+                        @ar.Fotos.Count <i class="bi bi-camera ms-1"></i>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Right column: incidences + photos -->
+    <div>
+        <!-- Incidences -->
+        @if (Model.Incidencias.Any())
+        {
+            <div class="admin-card" style="margin-bottom:16px;padding:0;overflow:hidden;">
+                <div style="padding:14px 20px;border-bottom:1px solid var(--bg);font-weight:600;font-size:15px;">
+                    Incidencias <span style="color:var(--text2);font-weight:400;">(@Model.Incidencias.Count)</span>
+                </div>
+                @foreach (var inc in Model.Incidencias.OrderByDescending(i => i.Severidad))
+                {
+                    var sevColor = inc.Severidad switch {
+                        Guardias.Models.SeveridadIncidencia.Grave => "#c62828",
+                        Guardias.Models.SeveridadIncidencia.Moderada => "#e65100",
+                        _ => "#2e7d32"
+                    };
+                    var sevLabel = inc.Severidad switch {
+                        Guardias.Models.SeveridadIncidencia.Grave => "Grave",
+                        Guardias.Models.SeveridadIncidencia.Moderada => "Moderada",
+                        _ => "Leve"
+                    };
+                    <div style="padding:12px 20px;border-bottom:1px solid var(--bg);">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px;">
+                            <span style="font-size:12px;font-weight:700;color:@sevColor;background:@(sevColor + "18");padding:2px 10px;border-radius:20px;">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>@sevLabel
+                            </span>
+                            <a href="/Admin/GestionarIncidencia/@inc.Id" class="btn-admin btn-admin-secondary" style="padding:3px 10px;font-size:12px;">
+                                Ver detalle
+                            </a>
+                        </div>
+                        <div style="font-size:14px;">@inc.Descripcion</div>
+                        @if (!string.IsNullOrWhiteSpace(inc.NotasCierre))
+                        {
+                            <div style="font-size:12px;color:#388e3c;margin-top:4px;"><i class="bi bi-check-circle me-1"></i>@inc.NotasCierre</div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Photos per area -->
+        @if (areaRondas.Any(ar => ar.Fotos.Any()))
+        {
+            <div class="admin-card" style="padding:0;overflow:hidden;">
+                <div style="padding:14px 20px;border-bottom:1px solid var(--bg);font-weight:600;font-size:15px;">
+                    Fotos <span style="color:var(--text2);font-weight:400;">(@totalFotos)</span>
+                </div>
+                <div style="padding:16px;">
+                    @foreach (var ar in areaRondas.Where(ar => ar.Fotos.Any()))
+                    {
+                        <div style="margin-bottom:16px;">
+                            <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px;">@ar.Area?.Nombre</div>
+                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+                                @foreach (var foto in ar.Fotos)
+                                {
+                                    <a href="@foto.RutaFoto" target="_blank" style="display:block;aspect-ratio:1;overflow:hidden;border-radius:8px;border:1px solid var(--bg);">
+                                        <img src="@foto.RutaFoto" alt="Foto @ar.Area?.Nombre" style="width:100%;height:100%;object-fit:cover;" loading="lazy" />
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

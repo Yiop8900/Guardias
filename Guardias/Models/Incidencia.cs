@@ -10,6 +10,8 @@ public class Incidencia
     [Required]
     public int RondaId { get; set; }
 
+    public int? AreaRondaId { get; set; }
+
     [Required(ErrorMessage = "La descripción es obligatoria")]
     [StringLength(1000)]
     [Display(Name = "Descripción")]
@@ -30,4 +32,7 @@ public class Incidencia
 
     [JsonIgnore]
     public Ronda? Ronda { get; set; }
+
+    [JsonIgnore]
+    public AreaRonda? AreaRonda { get; set; }
 }

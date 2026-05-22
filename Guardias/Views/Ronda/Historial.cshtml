@@ -22,7 +22,7 @@ else
     {
         <a href="/Ronda/Detalle/@ronda.Id" class="round-card">
             <div class="round-card-top">
-                <div class="round-card-name">@ronda.Guardia?.Nombre</div>
+                <div class="round-card-name">@(ronda.Guardia?.Nombre ?? ronda.NombreOperador)</div>
                 @switch (ronda.Estado)
                 {
                     case Guardias.Models.EstadoRonda.EnCurso:
@@ -39,9 +39,9 @@ else
             <div class="round-card-meta">
                 <span><i class="bi bi-building me-1"></i>@ronda.Edificio?.Nombre</span>
                 <span><i class="bi bi-clock me-1"></i>@ronda.FechaHora.ToString("dd/MM/yyyy HH:mm")</span>
-                @if (ronda.Fotos.Any())
+                @if (ronda.AreaRondas.Any(ar => ar.Fotos.Any()))
                 {
-                    <span><i class="bi bi-camera me-1"></i>@ronda.Fotos.Count foto(s)</span>
+                    <span><i class="bi bi-camera me-1"></i>@ronda.AreaRondas.Sum(ar => ar.Fotos.Count) foto(s)</span>
                 }
                 @if (ronda.Incidencias.Any())
                 {
