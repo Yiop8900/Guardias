@@ -9,5 +9,8 @@ appsettings.Development.json
 bin/
 obj/
 
+# Estado interno de Visual Studio
+.vs/
+
 # Uploads locales
 wwwroot/uploads/

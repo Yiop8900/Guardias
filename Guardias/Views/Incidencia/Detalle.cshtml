@@ -73,6 +73,29 @@
     <p style="font-size:15px;">@Model.Descripcion</p>
 </div>
 
+@{
+    var fotos = Model.Ronda?.AreaRondas
+        .FirstOrDefault(ar => ar.Id == Model.AreaRondaId)?.Fotos
+        .OrderBy(f => f.FechaCaptura)
+        .ToList()
+        ?? new List<Guardias.Models.FotoRonda>();
+}
+
+@if (fotos.Any())
+{
+    <div class="detail-section">
+        <div class="detail-label" style="margin-bottom:8px;">Fotografía(s)</div>
+        <div class="detail-photo-grid">
+            @foreach (var foto in fotos)
+            {
+                <a href="@foto.RutaFoto" target="_blank" class="detail-photo">
+                    <img src="@foto.RutaFoto" alt="Foto de la incidencia" loading="lazy" />
+                </a>
+            }
+        </div>
+    </div>
+}
+
 @if (!string.IsNullOrWhiteSpace(Model.NotasCierre))
 {
     <div class="detail-section" style="background:#E8F5E9;">

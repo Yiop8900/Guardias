@@ -14,7 +14,8 @@ public enum EstadoRonda
 {
     [Display(Name = "En curso")] EnCurso = 0,
     [Display(Name = "Finalizada")] Finalizada = 1,
-    [Display(Name = "Firmada")] FirmadaSupervisor = 2
+    [Display(Name = "Firmada")] FirmadaSupervisor = 2,
+    [Display(Name = "Reporte directo")] ReporteDirecto = 3
 }
 
 public enum EstadoIncidencia

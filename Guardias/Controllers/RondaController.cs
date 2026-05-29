@@ -36,7 +36,7 @@ public class RondaController : Controller
             .Include(r => r.Edificio)
             .Include(r => r.AreaRondas).ThenInclude(ar => ar.Fotos)
             .Include(r => r.Incidencias)
-            .Where(r => r.EdificioId == edificioId)
+            .Where(r => r.EdificioId == edificioId && r.Estado != EstadoRonda.ReporteDirecto)
             .OrderByDescending(r => r.FechaHora)
             .ToListAsync();
 
@@ -85,7 +85,7 @@ public class RondaController : Controller
             .Include(r => r.AreaRondas)
             .FirstOrDefaultAsync(r => r.EdificioId == edificioId && r.Estado == EstadoRonda.EnCurso);
         if (existing != null)
-            return RedirectToAction("CheckArea", new { rondaId = existing.Id, index = 0 });
+            return RedirectToAction("SeleccionArea", new { rondaId = existing.Id });
 
         var ronda = new Ronda
         {
@@ -116,11 +116,27 @@ public class RondaController : Controller
         }
         await _context.SaveChangesAsync();
 
-        return RedirectToAction("CheckArea", new { rondaId = ronda.Id, index = 0 });
+        return RedirectToAction("SeleccionArea", new { rondaId = ronda.Id });
     }
 
-    // GET: /Ronda/CheckArea?rondaId=5&index=0
-    public async Task<IActionResult> CheckArea(int rondaId, int index = 0)
+    // GET: /Ronda/SeleccionArea?rondaId=5
+    public async Task<IActionResult> SeleccionArea(int rondaId)
+    {
+        int edificioId = GetEdificioId();
+        var ronda = await _context.Rondas
+            .Include(r => r.Guardia)
+            .Include(r => r.Edificio)
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Area)
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Fotos)
+            .FirstOrDefaultAsync(r => r.Id == rondaId && r.EdificioId == edificioId);
+
+        if (ronda == null) return NotFound();
+        if (ronda.Estado != EstadoRonda.EnCurso) return RedirectToAction("Historial");
+        return View(ronda);
+    }
+
+    // GET: /Ronda/CheckArea?rondaId=5&areaRondaId=12
+    public async Task<IActionResult> CheckArea(int rondaId, int areaRondaId)
     {
         int edificioId = GetEdificioId();
         var ronda = await _context.Rondas
@@ -133,19 +149,15 @@ public class RondaController : Controller
         if (ronda == null) return NotFound();
         if (ronda.Estado != EstadoRonda.EnCurso) return RedirectToAction("Historial");
 
-        var areaRondas = ronda.AreaRondas.OrderBy(ar => ar.Area!.Orden).ToList();
+        var current = ronda.AreaRondas.FirstOrDefault(ar => ar.Id == areaRondaId);
+        if (current == null) return RedirectToAction("SeleccionArea", new { rondaId });
 
-        if (!areaRondas.Any() || index >= areaRondas.Count)
-            return RedirectToAction("FinalizarRonda", new { rondaId });
-
-        var current = areaRondas[index];
-        ViewBag.Index = index;
-        ViewBag.Total = areaRondas.Count;
         ViewBag.RondaId = rondaId;
         ViewBag.AreaRondaId = current.Id;
         ViewBag.AreaNombre = current.Area?.Nombre;
         ViewBag.AreaDescripcion = current.Area?.Descripcion;
-        ViewBag.CompletedCount = areaRondas.Count(ar => ar.Completada);
+        ViewBag.Total = ronda.AreaRondas.Count;
+        ViewBag.CompletedCount = ronda.AreaRondas.Count(ar => ar.Completada);
         return View(ronda);
     }
 
@@ -153,7 +165,7 @@ public class RondaController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(52_428_800)]
-    public async Task<IActionResult> CheckArea(int rondaId, int areaRondaId, int index, List<IFormFile> fotos, string? notas,
+    public async Task<IActionResult> CheckArea(int rondaId, int areaRondaId, List<IFormFile> fotos, string? notas,
         string? incDescripcion, SeveridadIncidencia incSeveridad = SeveridadIncidencia.Leve)
     {
         int edificioId = GetEdificioId();
@@ -176,15 +188,14 @@ public class RondaController : Controller
                 .Include(r => r.AreaRondas).ThenInclude(ar => ar.Area)
                 .Include(r => r.AreaRondas).ThenInclude(ar => ar.Fotos)
                 .FirstOrDefaultAsync(r => r.Id == rondaId);
-            var arReload = rondaReload!.AreaRondas.OrderBy(ar => ar.Area!.Orden).ToList();
-            var cur = arReload[index];
-            ViewBag.Index = index;
-            ViewBag.Total = arReload.Count;
+            var curReload = rondaReload!.AreaRondas.FirstOrDefault(ar => ar.Id == areaRondaId);
+            if (curReload == null) return RedirectToAction("SeleccionArea", new { rondaId });
             ViewBag.RondaId = rondaId;
-            ViewBag.AreaRondaId = cur.Id;
-            ViewBag.AreaNombre = cur.Area?.Nombre;
-            ViewBag.AreaDescripcion = cur.Area?.Descripcion;
-            ViewBag.CompletedCount = arReload.Count(ar => ar.Completada);
+            ViewBag.AreaRondaId = curReload.Id;
+            ViewBag.AreaNombre = curReload.Area?.Nombre;
+            ViewBag.AreaDescripcion = curReload.Area?.Descripcion;
+            ViewBag.Total = rondaReload.AreaRondas.Count;
+            ViewBag.CompletedCount = rondaReload.AreaRondas.Count(ar => ar.Completada);
             return View(rondaReload);
         }
 
@@ -247,13 +258,7 @@ public class RondaController : Controller
         }
 
         await _context.SaveChangesAsync();
-
-        int totalAreas = ronda.AreaRondas.Count;
-        int nextIndex = index + 1;
-        if (nextIndex < totalAreas)
-            return RedirectToAction("CheckArea", new { rondaId, index = nextIndex });
-
-        return RedirectToAction("FinalizarRonda", new { rondaId });
+        return RedirectToAction("SeleccionArea", new { rondaId });
     }
 
     // GET: /Ronda/FinalizarRonda?rondaId=5
@@ -280,9 +285,17 @@ public class RondaController : Controller
     {
         int edificioId = GetEdificioId();
         var ronda = await _context.Rondas
+            .Include(r => r.AreaRondas)
             .FirstOrDefaultAsync(r => r.Id == rondaId && r.EdificioId == edificioId);
 
         if (ronda == null) return NotFound();
+
+        // No permitir finalizar si quedan áreas sin revisar
+        if (ronda.AreaRondas.Any(ar => !ar.Completada))
+        {
+            TempData["Error"] = "Debes revisar todas las áreas antes de finalizar la ronda.";
+            return RedirectToAction("SeleccionArea", new { rondaId });
+        }
 
         ronda.Estado = EstadoRonda.Finalizada;
         ronda.ReporteIncidencias = reporteIncidencias;

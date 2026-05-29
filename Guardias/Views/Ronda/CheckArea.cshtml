@@ -1,33 +1,32 @@
 @model Guardias.Models.Ronda
 @{
     ViewData["ActiveTab"] = "nueva";
-    int index = (int)ViewBag.Index;
-    int total = (int)ViewBag.Total;
     int rondaId = (int)ViewBag.RondaId;
     int areaRondaId = (int)ViewBag.AreaRondaId;
     string areaNombre = ViewBag.AreaNombre ?? "Área";
     string? areaDesc = ViewBag.AreaDescripcion;
     int completed = (int)ViewBag.CompletedCount;
+    int total = (int)ViewBag.Total;
 }
 
 <div class="page-header">
     <h2>Revisión de Área</h2>
-    <p>Área @(index + 1) de @total</p>
+    <p>@completed de @total área(s) completada(s)</p>
 </div>
 
 <!-- Progress bar -->
-<div class="progress-steps" style="margin-bottom:20px;">
-    @for (int i = 0; i < total; i++)
-    {
-        <div class="progress-step @(i < completed ? "done" : i == index ? "done" : "")"></div>
-    }
+<div style="background:#f0f0f5;border-radius:8px;overflow:hidden;height:6px;margin-bottom:16px;">
+    <div style="height:100%;background:var(--blue);width:@(total > 0 ? (completed * 100 / total) : 0)%;transition:width .3s;"></div>
 </div>
 
 <!-- Round info -->
 <div class="form-section" style="background:#f5f7ff;margin-bottom:10px;padding:12px 16px;">
     <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--text2);">
-        <span><i class="bi bi-person me-1"></i><strong style="color:var(--text);">@(Model.Guardia?.Nombre ?? Model.NombreOperador)</strong></span>
-        <span><i class="bi bi-building me-1"></i>@Model.Edificio?.Nombre</span>
+        @if (Model.Guardia != null)
+        {
+            <span><i class="bi bi-person me-1"></i><strong style="color:var(--text);">@Model.Guardia.Nombre</strong></span>
+        }
+        <span><i class="bi bi-building me-1"></i><strong style="color:var(--text);">@Model.Edificio?.Nombre</strong></span>
         <span><i class="bi bi-clock me-1"></i>@Model.FechaHora.ToString("HH:mm")</span>
     </div>
 </div>
@@ -66,7 +65,6 @@
     @Html.AntiForgeryToken()
     <input type="hidden" name="rondaId" value="@rondaId" />
     <input type="hidden" name="areaRondaId" value="@areaRondaId" />
-    <input type="hidden" name="index" value="@index" />
 
     <!-- Photo upload -->
     <div class="form-section">
@@ -145,27 +143,11 @@
     </div>
 
     <div class="btn-row">
-        @if (index == 0)
-        {
-            <a href="/Ronda/Historial" class="btn-secondary-ios">
-                <i class="bi bi-x"></i> Cancelar
-            </a>
-        }
-        else
-        {
-            <a href="/Ronda/CheckArea?rondaId=@rondaId&index=@(index - 1)" class="btn-secondary-ios">
-                <i class="bi bi-arrow-left"></i> Atrás
-            </a>
-        }
+        <a href="/Ronda/SeleccionArea?rondaId=@rondaId" class="btn-secondary-ios">
+            <i class="bi bi-arrow-left"></i> Áreas
+        </a>
         <button type="submit" class="btn-primary-ios" id="btn-siguiente" onclick="return validateArea()">
-            @if (index + 1 < total)
-            {
-                <text><i class="bi bi-arrow-right"></i> Siguiente área</text>
-            }
-            else
-            {
-                <text><i class="bi bi-check-circle"></i> Completar áreas</text>
-            }
+            <i class="bi bi-check-circle"></i> Guardar área
         </button>
     </div>
 </form>

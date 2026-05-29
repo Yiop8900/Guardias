@@ -6,7 +6,7 @@
     ViewData["PageSub"] = "Detalle de la ronda";
     var areaRondas = Model.AreaRondas.OrderBy(ar => ar.Area!.Orden).ToList();
     int totalFotos = areaRondas.Sum(ar => ar.Fotos.Count);
-    var operador = Model.Guardia?.Nombre ?? Model.NombreOperador ?? "—";
+    var operador = Model.Guardia?.Nombre ?? "—";
 }
 
 <!-- Toolbar -->

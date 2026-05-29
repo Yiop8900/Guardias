@@ -1,0 +1,111 @@
+@model Guardias.Models.Ronda
+@{
+    ViewData["ActiveTab"] = "nueva";
+    var areaRondas = Model.AreaRondas.OrderBy(ar => ar.Area?.Orden ?? 0).ToList();
+    int completed = areaRondas.Count(ar => ar.Completada);
+    int total = areaRondas.Count;
+}
+
+<div class="page-header">
+    <h2>Ronda en curso</h2>
+    <p>@completed de @total área(s) revisada(s)</p>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert-ios alert-error" style="margin-bottom:14px;">
+        <i class="bi bi-exclamation-circle me-1"></i>@TempData["Error"]
+    </div>
+}
+
+<!-- Info ronda -->
+<div class="form-section" style="background:#f5f7ff;margin-bottom:10px;padding:12px 16px;">
+    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--text2);">
+        @if (Model.Guardia != null)
+        {
+            <span><i class="bi bi-person me-1"></i><strong style="color:var(--text);">@Model.Guardia.Nombre</strong></span>
+        }
+        <span><i class="bi bi-building me-1"></i><strong style="color:var(--text);">@Model.Edificio?.Nombre</strong></span>
+        <span><i class="bi bi-clock me-1"></i>@Model.FechaHora.ToString("HH:mm")</span>
+    </div>
+</div>
+
+<!-- Barra de progreso -->
+<div style="background:#f0f0f5;border-radius:8px;overflow:hidden;height:6px;margin-bottom:20px;">
+    <div style="height:100%;background:var(--blue);width:@(total > 0 ? (completed * 100 / total) : 0)%;transition:width .4s;"></div>
+</div>
+
+<div style="margin-bottom:10px;font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">
+    Selecciona un área para revisar
+</div>
+
+@foreach (var ar in areaRondas)
+{
+    if (ar.Completada)
+    {
+        <div class="area-select-card completed">
+            <div class="area-select-icon completed">
+                <i class="bi bi-check-circle-fill"></i>
+            </div>
+            <div class="area-select-info">
+                <div class="area-select-name">@ar.Area?.Nombre</div>
+                <div class="area-select-status completed">
+                    <i class="bi bi-check me-1"></i>Revisada
+                    @if (ar.FechaCompletada.HasValue)
+                    {
+                        <text>· @ar.FechaCompletada.Value.ToString("HH:mm")</text>
+                    }
+                    @if (ar.Fotos.Any())
+                    {
+                        <text>· <i class="bi bi-camera me-1"></i>@ar.Fotos.Count foto(s)</text>
+                    }
+                </div>
+            </div>
+            <i class="bi bi-check2" style="color:#2e7d32;font-size:18px;"></i>
+        </div>
+    }
+    else
+    {
+        <a href="/Ronda/CheckArea?rondaId=@Model.Id&areaRondaId=@ar.Id" class="area-select-card pending">
+            <div class="area-select-icon pending">
+                <i class="bi bi-map"></i>
+            </div>
+            <div class="area-select-info">
+                <div class="area-select-name">@ar.Area?.Nombre</div>
+                @if (!string.IsNullOrEmpty(ar.Area?.Descripcion))
+                {
+                    <div class="area-select-status" style="color:var(--text2);font-size:12px;">@ar.Area.Descripcion</div>
+                }
+                <div class="area-select-status pending">Pendiente</div>
+            </div>
+            <i class="bi bi-chevron-right" style="color:var(--blue);font-size:16px;"></i>
+        </a>
+    }
+}
+
+@if (!areaRondas.Any())
+{
+    <div class="empty-state">
+        <div class="empty-icon"><i class="bi bi-map"></i></div>
+        <h3>Sin áreas configuradas</h3>
+        <p>Este edificio no tiene áreas activas</p>
+    </div>
+}
+
+<!-- Finalizar -->
+<div style="margin-top:24px;">
+    @if (completed < total)
+    {
+        <div style="background:#fff8ec;border:1.5px solid #ffe0a0;border-radius:12px;padding:12px 14px;font-size:14px;color:#7a5300;margin-bottom:14px;">
+            <i class="bi bi-exclamation-circle me-1"></i>
+            Debes revisar todas las áreas antes de finalizar. Quedan @(total - completed) área(s) pendiente(s).
+        </div>
+    }
+    <form method="post" asp-controller="Ronda" asp-action="FinalizarRonda">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="rondaId" value="@Model.Id" />
+        <button type="submit" class="btn-primary-ios" @(completed < total ? "disabled style=\"opacity:.5;\"" : "")>
+            <i class="bi bi-check-circle"></i> Finalizar ronda
+        </button>
+    </form>
+</div>

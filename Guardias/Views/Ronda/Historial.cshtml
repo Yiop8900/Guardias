@@ -22,7 +22,7 @@ else
     {
         <a href="/Ronda/Detalle/@ronda.Id" class="round-card">
             <div class="round-card-top">
-                <div class="round-card-name">@(ronda.Guardia?.Nombre ?? ronda.NombreOperador)</div>
+                <div class="round-card-name">@(ronda.Guardia?.Nombre ?? ronda.Edificio?.Nombre)</div>
                 @switch (ronda.Estado)
                 {
                     case Guardias.Models.EstadoRonda.EnCurso:

@@ -17,6 +17,20 @@
     </div>
 </div>
 
+@if (User.IsInRole("Guardia"))
+{
+    <a href="/Incidencia/Reportar" class="reportar-inc-btn">
+        <i class="bi bi-plus-circle-fill me-2"></i>Reportar nueva incidencia
+    </a>
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert-ios alert-success" style="margin-bottom:14px;">
+        <i class="bi bi-check-circle me-1"></i>@TempData["Success"]
+    </div>
+}
+
 <div class="filter-pills">
     <a href="/Incidencia" class="pill @(filtro == "todas" ? "active" : "")">Todas</a>
     <a href="/Incidencia?filtro=abiertas" class="pill @(filtro == "abiertas" ? "active" : "")">Abiertas</a>
@@ -40,7 +54,7 @@ else
         <a href="/Incidencia/Detalle/@inc.Id" class="incident-card">
             <div class="incident-top">
                 <div style="font-weight:600;font-size:15px;">
-                    @inc.Ronda?.Guardia?.Nombre ?? "—"
+                    @(inc.Ronda?.Guardia?.Nombre ?? inc.Ronda.Edificio.Nombre)
                 </div>
                 <div style="display:flex;gap:6px;flex-shrink:0;">
                     @switch (inc.Severidad)

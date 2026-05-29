@@ -52,7 +52,7 @@
                 {
                     <tr>
                         <td style="color:var(--text2);">@r.Id</td>
-                        <td style="font-weight:500;">@(r.Guardia?.Nombre ?? r.NombreOperador ?? "—")</td>
+                        <td style="font-weight:500;">@(r.Guardia?.Nombre ?? "—")</td>
                         <td style="color:var(--text2);">@r.Edificio?.Nombre</td>
                         <td style="color:var(--text2);">@r.FechaHora.ToString("dd/MM/yy HH:mm")</td>
                         <td>

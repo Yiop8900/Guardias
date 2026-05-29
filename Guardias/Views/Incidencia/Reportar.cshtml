@@ -1,0 +1,191 @@
+@{
+    ViewData["ActiveTab"] = "incidencias";
+    var areas = ViewBag.Areas as List<Guardias.Models.Area> ?? new List<Guardias.Models.Area>();
+}
+
+<div class="page-header">
+    <h2>Reportar Incidencia</h2>
+    <p>Registro directo sin ejecutar ronda</p>
+</div>
+
+@if (!ViewContext.ModelState.IsValid)
+{
+    <div class="alert-ios alert-error" style="margin-bottom:12px;">
+        @foreach (var entry in ViewContext.ModelState.Values)
+        {
+            foreach (var err in entry.Errors)
+            {
+                <div><i class="bi bi-exclamation-circle me-1"></i>@err.ErrorMessage</div>
+            }
+        }
+    </div>
+}
+
+<form method="post" enctype="multipart/form-data"
+      asp-controller="Incidencia" asp-action="Reportar" id="reportar-form">
+    @Html.AntiForgeryToken()
+
+    <!-- Área -->
+    <div class="form-section">
+        <label class="form-label-ios" for="areaId">
+            Área de la incidencia <span style="color:var(--red)">*</span>
+        </label>
+        @if (areas.Any())
+        {
+            <select id="areaId" name="areaId" class="form-control-ios" required>
+                <option value="">Seleccionar área...</option>
+                @foreach (var a in areas)
+                {
+                    <option value="@a.Id">@a.Nombre</option>
+                }
+            </select>
+        }
+        else
+        {
+            <div style="color:var(--text2);font-size:14px;padding:10px 0;">
+                <i class="bi bi-exclamation-circle me-1"></i>No hay áreas configuradas para este edificio.
+            </div>
+        }
+    </div>
+
+    <!-- Fotografía -->
+    <div class="form-section">
+        <label class="form-label-ios">
+            Fotografía <span style="color:var(--red)">*</span>
+        </label>
+        <div class="camera-capture-zone" onclick="document.getElementById('cameraInput').click()">
+            <div class="camera-icon-wrap"><i class="bi bi-camera-fill"></i></div>
+            <span>Tomar foto</span>
+        </div>
+        <button type="button" class="gallery-pick-btn" onclick="document.getElementById('galleryInput').click()">
+            <i class="bi bi-images me-1"></i>Elegir desde galería
+        </button>
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handleFiles(this.files)" style="display:none;" />
+        <input type="file" id="galleryInput" accept="image/*" multiple onchange="handleFiles(this.files)" style="display:none;" />
+        <input type="file" id="fileInput" name="fotos" multiple accept="image/*" style="display:none;" />
+        <div class="photo-grid" id="photoGrid"></div>
+    </div>
+
+    <!-- Descripción -->
+    <div class="form-section">
+        <label class="form-label-ios" for="descripcion">
+            Descripción <span style="color:var(--red)">*</span>
+        </label>
+        <textarea id="descripcion" name="descripcion" class="form-control-ios" rows="4" required
+                  placeholder="Describe el problema encontrado..."></textarea>
+    </div>
+
+    <!-- Severidad -->
+    <div class="form-section">
+        <label class="form-label-ios">Severidad</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px;">
+            <label style="cursor:pointer;">
+                <input type="radio" name="severidad" value="0" style="display:none;" class="sev-radio" onchange="updateSev()" checked />
+                <div class="sev-btn" data-val="0" style="text-align:center;padding:10px 6px;border-radius:10px;border:2px solid #c8e6c9;background:#f1f8e9;font-size:13px;font-weight:600;color:#2e7d32;">
+                    <i class="bi bi-circle me-1"></i>Leve
+                </div>
+            </label>
+            <label style="cursor:pointer;">
+                <input type="radio" name="severidad" value="1" style="display:none;" class="sev-radio" onchange="updateSev()" />
+                <div class="sev-btn" data-val="1" style="text-align:center;padding:10px 6px;border-radius:10px;border:2px solid #ffe0b2;background:#fff8f0;font-size:13px;font-weight:600;color:#e65100;">
+                    <i class="bi bi-exclamation-circle me-1"></i>Moderada
+                </div>
+            </label>
+            <label style="cursor:pointer;">
+                <input type="radio" name="severidad" value="2" style="display:none;" class="sev-radio" onchange="updateSev()" />
+                <div class="sev-btn" data-val="2" style="text-align:center;padding:10px 6px;border-radius:10px;border:2px solid #ffcdd2;background:#fff5f5;font-size:13px;font-weight:600;color:#c62828;">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>Grave
+                </div>
+            </label>
+        </div>
+    </div>
+
+    <div class="btn-row">
+        <a href="/Incidencia" class="btn-secondary-ios"><i class="bi bi-x"></i> Cancelar</a>
+        <button type="submit" class="btn-primary-ios" onclick="return validateForm()">
+            <i class="bi bi-exclamation-triangle"></i> Reportar
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    let selectedFiles = [];
+
+    function handleFiles(files) {
+        for (const f of files) {
+            if (!f.type.startsWith('image/')) continue;
+            if (selectedFiles.find(x => x.name === f.name && x.size === f.size)) continue;
+            selectedFiles.push(f);
+        }
+        renderPreviews();
+        updateFileInput();
+    }
+
+    function renderPreviews() {
+        const grid = document.getElementById('photoGrid');
+        grid.innerHTML = '';
+        selectedFiles.forEach((f, i) => {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const div = document.createElement('div');
+                div.className = 'photo-thumb';
+                div.innerHTML = `<img src="${e.target.result}" alt="foto"/><button type="button" class="remove-btn" onclick="removePhoto(${i})">×</button>`;
+                grid.appendChild(div);
+            };
+            reader.readAsDataURL(f);
+        });
+    }
+
+    function removePhoto(i) {
+        selectedFiles.splice(i, 1);
+        renderPreviews();
+        updateFileInput();
+    }
+
+    function updateFileInput() {
+        const dt = new DataTransfer();
+        selectedFiles.forEach(f => dt.items.add(f));
+        document.getElementById('fileInput').files = dt.files;
+    }
+
+    const sevColors = [
+        { border: '#c8e6c9', bg: '#f1f8e9', color: '#2e7d32' },
+        { border: '#ffe0b2', bg: '#fff8f0', color: '#e65100' },
+        { border: '#ffcdd2', bg: '#fff5f5', color: '#c62828' }
+    ];
+
+    function updateSev() {
+        document.querySelectorAll('.sev-radio').forEach((radio, i) => {
+            const btn = document.querySelectorAll('.sev-btn')[i];
+            const c = sevColors[i];
+            if (radio.checked) {
+                btn.style.border = `2px solid ${c.color}`;
+                btn.style.background = c.bg;
+                btn.style.boxShadow = `0 0 0 3px ${c.border}`;
+            } else {
+                btn.style.border = `2px solid ${c.border}`;
+                btn.style.background = c.bg;
+                btn.style.boxShadow = 'none';
+            }
+        });
+    }
+
+    document.querySelectorAll('.sev-btn').forEach((btn, i) => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.sev-radio')[i].checked = true;
+            updateSev();
+        });
+    });
+    updateSev();
+
+    function validateForm() {
+        const area = document.getElementById('areaId')?.value;
+        if (!area) { alert('Selecciona el área de la incidencia.'); return false; }
+        if (selectedFiles.length === 0) { alert('Debes subir al menos una fotografía.'); return false; }
+        const desc = document.getElementById('descripcion').value.trim();
+        if (!desc) { alert('La descripción es obligatoria.'); return false; }
+        return true;
+    }
+</script>
+}
