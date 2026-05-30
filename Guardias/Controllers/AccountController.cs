@@ -74,11 +74,25 @@ public class AccountController : Controller
             var result = hasher.VerifyHashedPassword(usuarioEdificio, usuarioEdificio.PasswordHash, password);
             if (result == PasswordVerificationResult.Success || result == PasswordVerificationResult.SuccessRehashNeeded)
             {
+                if (usuarioEdificio.EsAdmin)
+                {
+                    var adminClaims = new List<Claim>
+                    {
+                        new Claim(ClaimTypes.Name, usuario),
+                        new Claim(ClaimTypes.Role, "Admin"),
+                        new Claim("EdificioId", "0"),
+                        new Claim("EdificioNombre", "Administrador")
+                    };
+                    var adminIdentity = new ClaimsIdentity(adminClaims, CookieAuthenticationDefaults.AuthenticationScheme);
+                    await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(adminIdentity));
+                    return RedirectToAction("Index", "Admin");
+                }
+
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.Name, usuario),
                     new Claim(ClaimTypes.Role, "Guardia"),
-                    new Claim("EdificioId", usuarioEdificio.EdificioId.ToString()),
+                    new Claim("EdificioId", usuarioEdificio.EdificioId?.ToString() ?? "0"),
                     new Claim("EdificioNombre", usuarioEdificio.Edificio?.Nombre ?? "")
                 };
                 var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);

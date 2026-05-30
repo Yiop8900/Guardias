@@ -16,8 +16,11 @@ public class UsuarioEdificio
 
     public string? PasswordPlain { get; set; }
 
-    [Required]
-    public int EdificioId { get; set; }
+    [Display(Name = "Administrador")]
+    public bool EsAdmin { get; set; } = false;
+
+    [Display(Name = "Edificio")]
+    public int? EdificioId { get; set; }
 
     [Display(Name = "Activo")]
     public bool Activo { get; set; } = true;

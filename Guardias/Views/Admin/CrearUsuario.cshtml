@@ -31,6 +31,20 @@
         @Html.AntiForgeryToken()
 
         <div class="form-admin-group">
+            <label class="form-admin-label">Tipo de usuario</label>
+            <div style="display:flex;gap:10px;">
+                <label class="tipo-pill" style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;border:1.5px solid var(--sep);border-radius:10px;cursor:pointer;">
+                    <input type="radio" name="EsAdmin" value="false" checked onchange="toggleTipo()" />
+                    <span><i class="bi bi-shield-lock me-1" style="color:var(--blue);"></i>Guardia de edificio</span>
+                </label>
+                <label class="tipo-pill" style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;border:1.5px solid var(--sep);border-radius:10px;cursor:pointer;">
+                    <input type="radio" name="EsAdmin" value="true" onchange="toggleTipo()" />
+                    <span><i class="bi bi-person-badge me-1" style="color:var(--orange);"></i>Administrador</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="form-admin-group">
             <label class="form-admin-label">Nombre de usuario <span style="color:red;">*</span></label>
             <input type="text" name="NombreUsuario" class="form-admin-control"
                    placeholder="Ej: torreA, guardia01" autocomplete="off" required />
@@ -42,15 +56,18 @@
                    placeholder="Mínimo 4 caracteres" autocomplete="new-password" minlength="4" required />
         </div>
 
-        <div class="form-admin-group">
-            <label class="form-admin-label">Edificio <span style="color:red;">*</span></label>
-            <select name="EdificioId" class="form-admin-control" required>
+        <div class="form-admin-group" id="edificio-group">
+            <label class="form-admin-label">Edificio <span style="color:red;" class="edificio-req">*</span></label>
+            <select name="EdificioId" id="edificio-select" class="form-admin-control" required>
                 <option value="">— Selecciona edificio —</option>
                 @foreach (var e in edificios!)
                 {
                     <option value="@e.Id">@e.Nombre</option>
                 }
             </select>
+            <div style="font-size:12px;color:var(--text2);margin-top:6px;" id="admin-hint" style="display:none;">
+                Los administradores no se asocian a un edificio.
+            </div>
         </div>
 
         <div class="form-admin-group" style="display:flex;align-items:center;gap:10px;">
@@ -66,3 +83,28 @@
         </div>
     </form>
 </div>
+
+@section Scripts {
+<script>
+    function toggleTipo() {
+        var esAdmin = document.querySelector('input[name="EsAdmin"]:checked').value === 'true';
+        var group = document.getElementById('edificio-group');
+        var select = document.getElementById('edificio-select');
+        var hint = document.getElementById('admin-hint');
+        var req = document.querySelector('.edificio-req');
+        if (esAdmin) {
+            select.required = false;
+            select.value = '';
+            select.style.display = 'none';
+            req.style.display = 'none';
+            hint.style.display = 'block';
+        } else {
+            select.required = true;
+            select.style.display = 'block';
+            req.style.display = 'inline';
+            hint.style.display = 'none';
+        }
+    }
+    toggleTipo();
+</script>
+}

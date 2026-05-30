@@ -263,6 +263,16 @@ public class AdminController : Controller
         if (await _context.UsuariosEdificio.AnyAsync(u => u.NombreUsuario == usuario.NombreUsuario))
             ModelState.AddModelError("NombreUsuario", "Ya existe un usuario con ese nombre.");
 
+        if (usuario.EsAdmin)
+        {
+            // Los administradores no se asocian a un edificio
+            usuario.EdificioId = null;
+        }
+        else if (usuario.EdificioId == null)
+        {
+            ModelState.AddModelError("EdificioId", "Selecciona un edificio para el usuario.");
+        }
+
         if (ModelState.IsValid)
         {
             var hasher = new PasswordHasher<UsuarioEdificio>();
@@ -293,13 +303,17 @@ public class AdminController : Controller
         if (await _context.UsuariosEdificio.AnyAsync(u => u.NombreUsuario == usuario.NombreUsuario && u.Id != id))
             ModelState.AddModelError("NombreUsuario", "Ya existe un usuario con ese nombre.");
 
+        if (!usuario.EsAdmin && usuario.EdificioId == null)
+            ModelState.AddModelError("EdificioId", "Selecciona un edificio para el usuario.");
+
         if (ModelState.IsValid)
         {
             var existing = await _context.UsuariosEdificio.FindAsync(id);
             if (existing == null) return NotFound();
 
             existing.NombreUsuario = usuario.NombreUsuario;
-            existing.EdificioId = usuario.EdificioId;
+            existing.EsAdmin = usuario.EsAdmin;
+            existing.EdificioId = usuario.EsAdmin ? null : usuario.EdificioId;
             existing.Activo = usuario.Activo;
 
             if (!string.IsNullOrWhiteSpace(nuevaPassword) && nuevaPassword.Length >= 4)

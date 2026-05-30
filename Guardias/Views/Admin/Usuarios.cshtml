@@ -3,7 +3,7 @@
     Layout = "_AdminLayout";
     ViewData["Title"] = "Usuarios de Edificio";
     ViewData["AdminSection"] = "usuarios";
-    ViewData["PageSub"] = "Gestiona los accesos de guardias por edificio";
+    ViewData["PageSub"] = "Gestiona los accesos de guardias y administradores";
 }
 
 <div class="admin-toolbar">
@@ -28,6 +28,7 @@
             <thead>
                 <tr>
                     <th>Usuario</th>
+                    <th>Tipo</th>
                     <th>Edificio</th>
                     <th>
                         Contraseña
@@ -47,7 +48,17 @@
                         <td style="font-weight:500;">
                             <i class="bi bi-person me-2" style="color:var(--blue);"></i>@u.NombreUsuario
                         </td>
-                        <td>@u.Edificio?.Nombre</td>
+                        <td>
+                            @if (u.EsAdmin)
+                            {
+                                <span class="badge-ios" style="background:#fff3e0;color:#e8963a;"><i class="bi bi-person-badge me-1"></i>Administrador</span>
+                            }
+                            else
+                            {
+                                <span class="badge-ios" style="background:#eef4ff;color:var(--blue);"><i class="bi bi-shield-lock me-1"></i>Guardia</span>
+                            }
+                        </td>
+                        <td>@(u.EsAdmin ? "—" : (u.Edificio?.Nombre ?? "—"))</td>
                         <td>
                             <span class="hash-cell" style="font-family:monospace;font-weight:600;color:var(--text);display:none;">
                                 @(u.PasswordPlain ?? "—")
