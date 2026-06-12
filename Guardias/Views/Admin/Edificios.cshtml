@@ -56,7 +56,7 @@
                                 <form id="del-edificio-@e.Id" method="post" asp-controller="Admin" asp-action="EliminarEdificio" asp-route-id="@e.Id" style="display:inline;">
                                     @Html.AntiForgeryToken()
                                     <button type="button" class="btn-admin btn-admin-danger" style="padding:6px 12px;font-size:13px;"
-                                            onclick="confirmarEliminar('del-edificio-@e.Id','¿Eliminar edificio?','Se eliminará @e.Nombre y todos sus datos de forma permanente.')">
+                                            onclick="confirmarEliminar('del-edificio-@e.Id','¿Eliminar edificio?','Se eliminará @e.Nombre junto con todas sus áreas y rondas asociadas de forma permanente.')">
                                         <i class="bi bi-trash"></i> Eliminar
                                     </button>
                                 </form>

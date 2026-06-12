@@ -152,6 +152,42 @@ public class AdminController : Controller
         var edificio = await _context.Edificios.FindAsync(id);
         if (edificio != null)
         {
+            var areaIds = await _context.Areas
+                .Where(a => a.EdificioId == id)
+                .Select(a => a.Id)
+                .ToListAsync();
+
+            if (areaIds.Any())
+            {
+                var areaRondaIds = await _context.AreaRondas
+                    .Where(ar => areaIds.Contains(ar.AreaId))
+                    .Select(ar => ar.Id)
+                    .ToListAsync();
+
+                if (areaRondaIds.Any())
+                {
+                    var fotos = await _context.FotosRonda
+                        .Where(f => areaRondaIds.Contains(f.AreaRondaId))
+                        .ToListAsync();
+                    _context.FotosRonda.RemoveRange(fotos);
+                }
+
+                var areaRondas = await _context.AreaRondas
+                    .Where(ar => areaIds.Contains(ar.AreaId))
+                    .ToListAsync();
+                _context.AreaRondas.RemoveRange(areaRondas);
+
+                var areas = await _context.Areas
+                    .Where(a => areaIds.Contains(a.Id))
+                    .ToListAsync();
+                _context.Areas.RemoveRange(areas);
+            }
+
+            var rondas = await _context.Rondas
+                .Where(r => r.EdificioId == id)
+                .ToListAsync();
+            _context.Rondas.RemoveRange(rondas);
+
             _context.Edificios.Remove(edificio);
             await _context.SaveChangesAsync();
             TempData["Success"] = "Edificio eliminado correctamente.";
