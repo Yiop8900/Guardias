@@ -1,0 +1,100 @@
+@model List<Guardias.Models.EmpresaAdministradora>
+@{
+    Layout = "_SuperAdminLayout";
+    ViewData["Title"] = "Empresas Administradoras";
+    ViewData["SASection"] = "empresas";
+    ViewData["PageSub"] = "Gestiona las empresas y sus límites de uso";
+}
+
+<div class="admin-toolbar">
+    <div style="flex:1;"></div>
+    <a href="/SuperAdmin/CrearEmpresa" class="btn-admin btn-admin-primary">
+        <i class="bi bi-plus-lg"></i> Nueva empresa
+    </a>
+</div>
+
+<div class="admin-card" style="padding:0;overflow:hidden;">
+    @if (!Model.Any())
+    {
+        <div style="padding:40px;text-align:center;color:var(--text2);">
+            <i class="bi bi-building-gear" style="font-size:40px;display:block;margin-bottom:10px;"></i>
+            No hay empresas registradas.
+        </div>
+    }
+    else
+    {
+        <div class="table-scroll-wrap">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Empresa</th>
+                    <th>Límite Admins</th>
+                    <th>Límite Edificios</th>
+                    <th>Admins actuales</th>
+                    <th>Edificios actuales</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var e in Model)
+                {
+                    var totalAdmins = e.Usuarios.Count(u => !u.EsPropietario && (u.Rol == Guardias.Models.RolUsuario.Admin || u.EsAdmin));
+                    var totalEdificios = e.Edificios.Count;
+                    <tr>
+                        <td style="font-weight:500;">
+                            <i class="bi bi-building-gear me-2" style="color:#7B1FA2;"></i>@e.Nombre
+                            @if (!string.IsNullOrEmpty(e.Descripcion))
+                            {
+                                <div style="font-size:12px;color:var(--text2);font-weight:400;">@e.Descripcion</div>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge-ios" style="background:#f3e5f5;color:#7B1FA2;">@e.LimiteAdmins</span>
+                        </td>
+                        <td>
+                            <span class="badge-ios" style="background:#fff3e0;color:var(--orange);">@e.LimiteEdificios</span>
+                        </td>
+                        <td>
+                            <span class="@(totalAdmins >= e.LimiteAdmins ? "badge-ios" : "")"
+                                  style="@(totalAdmins >= e.LimiteAdmins ? "background:#fdecea;color:var(--red);" : "")">
+                                @totalAdmins / @e.LimiteAdmins
+                            </span>
+                        </td>
+                        <td>
+                            <span class="@(totalEdificios >= e.LimiteEdificios ? "badge-ios" : "")"
+                                  style="@(totalEdificios >= e.LimiteEdificios ? "background:#fdecea;color:var(--red);" : "")">
+                                @totalEdificios / @e.LimiteEdificios
+                            </span>
+                        </td>
+                        <td>
+                            @if (e.Activa)
+                            {
+                                <span class="badge-ios badge-done">Activa</span>
+                            }
+                            else
+                            {
+                                <span class="badge-ios" style="background:#f5f5f5;color:var(--text2);">Inactiva</span>
+                            }
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                <a href="/SuperAdmin/EditarEmpresa/@e.Id" class="btn-admin btn-admin-secondary" style="padding:6px 12px;font-size:13px;">
+                                    <i class="bi bi-pencil"></i> Editar
+                                </a>
+                                <form id="del-emp-@e.Id" method="post" asp-controller="SuperAdmin" asp-action="EliminarEmpresa" asp-route-id="@e.Id" style="display:inline;">
+                                    @Html.AntiForgeryToken()
+                                    <button type="button" class="btn-admin btn-admin-danger" style="padding:6px 12px;font-size:13px;"
+                                            onclick="confirmarEliminar('del-emp-@e.Id','¿Eliminar empresa?','Se eliminará @e.Nombre y todos sus datos asociados de forma permanente.')">
+                                        <i class="bi bi-trash"></i> Eliminar
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    }
+</div>

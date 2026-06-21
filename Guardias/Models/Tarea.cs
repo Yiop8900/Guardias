@@ -33,8 +33,15 @@ public class Tarea
 
     public DateTime FechaCreacion { get; set; } = DateTime.Now;
 
+    public DateTime? FechaCompletada { get; set; }
+
+    // Calculado: true si fue completada HOY
+    public bool CompletadaHoy => FechaCompletada?.Date == DateTime.Today;
+
     public Guardia? Guardia { get; set; }
 
     [JsonIgnore]
     public Edificio? Edificio { get; set; }
+
+    public ICollection<TareaArchivo> Archivos { get; set; } = new List<TareaArchivo>();
 }

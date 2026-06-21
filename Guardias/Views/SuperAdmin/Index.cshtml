@@ -1,0 +1,56 @@
+@{
+    Layout = "_SuperAdminLayout";
+    ViewData["Title"] = "Dashboard Global";
+    ViewData["SASection"] = "dashboard";
+}
+
+<div class="admin-stat-grid">
+    <div class="admin-stat">
+        <div class="admin-stat-icon" style="color:#7B1FA2;"><i class="bi bi-building-gear"></i></div>
+        <div class="admin-stat-value">@ViewBag.TotalEmpresas</div>
+        <div class="admin-stat-label">Empresas activas</div>
+    </div>
+    <div class="admin-stat">
+        <div class="admin-stat-icon" style="color:var(--orange);"><i class="bi bi-building"></i></div>
+        <div class="admin-stat-value">@ViewBag.TotalEdificios</div>
+        <div class="admin-stat-label">Edificios totales</div>
+    </div>
+    <div class="admin-stat">
+        <div class="admin-stat-icon" style="color:var(--blue);"><i class="bi bi-people-fill"></i></div>
+        <div class="admin-stat-value">@ViewBag.TotalUsuarios</div>
+        <div class="admin-stat-label">Usuarios activos</div>
+    </div>
+    <div class="admin-stat">
+        <div class="admin-stat-icon" style="color:var(--green);"><i class="bi bi-clipboard2-check"></i></div>
+        <div class="admin-stat-value">@ViewBag.RondasHoy</div>
+        <div class="admin-stat-label">Rondas hoy</div>
+    </div>
+    <div class="admin-stat">
+        <div class="admin-stat-icon" style="color:var(--red);"><i class="bi bi-exclamation-triangle-fill"></i></div>
+        <div class="admin-stat-value">@ViewBag.IncidenciasAbiertas</div>
+        <div class="admin-stat-label">Incidencias abiertas</div>
+    </div>
+    <div class="admin-stat">
+        <div class="admin-stat-icon" style="color:var(--blue);"><i class="bi bi-person-fill"></i></div>
+        <div class="admin-stat-value">@ViewBag.TotalGuardias</div>
+        <div class="admin-stat-label">Guardias activos</div>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:8px;">
+    <a href="/SuperAdmin/Empresas" class="admin-card" style="text-decoration:none;color:inherit;display:block;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+        <div style="font-size:28px;color:#7B1FA2;margin-bottom:10px;"><i class="bi bi-building-gear"></i></div>
+        <div style="font-weight:600;font-size:16px;">Gestionar Empresas</div>
+        <div style="color:var(--text2);font-size:13px;margin-top:4px;">Crear y configurar empresas administradoras</div>
+    </a>
+    <a href="/SuperAdmin/SuperAdmins" class="admin-card" style="text-decoration:none;color:inherit;display:block;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+        <div style="font-size:28px;color:var(--orange);margin-bottom:10px;"><i class="bi bi-shield-fill-check"></i></div>
+        <div style="font-weight:600;font-size:16px;">Super Admins</div>
+        <div style="color:var(--text2);font-size:13px;margin-top:4px;">Gestionar cuentas de super administrador</div>
+    </a>
+    <a href="/Admin" class="admin-card" style="text-decoration:none;color:inherit;display:block;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+        <div style="font-size:28px;color:var(--blue);margin-bottom:10px;"><i class="bi bi-grid-1x2"></i></div>
+        <div style="font-weight:600;font-size:16px;">Panel de Empresa</div>
+        <div style="color:var(--text2);font-size:13px;margin-top:4px;">Ver datos globales de guardias y rondas</div>
+    </a>
+</div>

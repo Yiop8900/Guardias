@@ -6,8 +6,11 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Control de Ronda</title>
-    <link rel="icon" type="image/png" href="~/favicon.png" />
+    <title>OperApp</title>
+    <link rel="manifest" href="~/manifest.json" />
+    <link rel="icon" type="image/png" sizes="32x32" href="~/img/LogoOperapp.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="~/img/LogoOperapp.png" />
+    <meta name="theme-color" content="#2563EB" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/mobile.css" asp-append-version="true" />
@@ -15,12 +18,12 @@
 <body class="mobile-body">
 
     <header class="app-header">
-        <div class="app-header-icon">
-            <i class="bi bi-shield-fill-check"></i>
+        <div class="app-header-icon" style="background:transparent;padding:0;">
+            <img src="~/img/LogoOperapp.jpeg" alt="OperApp" style="width:44px;height:44px;object-fit:contain;border-radius:10px;" />
         </div>
         <div class="app-header-text">
-            <div class="app-title">Control de Ronda</div>
-            <div class="app-subtitle">@(User.FindFirst("EdificioNombre")?.Value ?? "Control de rondas")</div>
+            <div class="app-title" style="background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">OperApp</div>
+            <div class="app-subtitle">@(User.FindFirst("EdificioNombre")?.Value ?? "Gestión de operaciones")</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
             @if (User.Identity?.IsAuthenticated == true)
@@ -71,6 +74,15 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/offline.js" asp-append-version="true"></script>
+    <script>
+        // Guardar sync token mientras estamos online
+        if (navigator.onLine) {
+            fetch('/Sync/Token').then(r => r.json()).then(d => {
+                if (d.token) window.OperApp && window.OperApp.saveSyncKey(d.token);
+            }).catch(() => {});
+        }
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

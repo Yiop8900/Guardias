@@ -111,9 +111,9 @@
 
         <!-- Header -->
         <div class="report-header">
-            <img src="@Url.Content("~/favicon.png")" alt="Logo" class="report-logo" />
+            <img src="@Url.Content("~/img/LogoOperapp.jpeg")" alt="OperApp" class="report-logo" />
             <div class="report-title-block">
-                <div class="report-title">Control de Ronda</div>
+                <div class="report-title">OperApp</div>
                 <div class="report-subtitle">@(Model.Ronda?.Edificio?.Nombre ?? "Edificio") · Sistema de Gestión de Seguridad</div>
             </div>
             <div class="report-id">INC-@Model.Id.ToString("D4")</div>
@@ -225,7 +225,7 @@
 
         <!-- Footer -->
         <div class="report-footer">
-            <span>Control de Ronda · @(Model.Ronda?.Edificio?.Nombre)</span>
+            <span>OperApp · @(Model.Ronda?.Edificio?.Nombre)</span>
             <span>Generado el @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</span>
         </div>
 

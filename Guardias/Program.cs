@@ -44,6 +44,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(
+    name: "superadmin",
+    pattern: "SuperAdmin/{action=Index}/{id?}",
+    defaults: new { controller = "SuperAdmin" });
+
+app.MapControllerRoute(
     name: "admin",
     pattern: "Admin/{action=Index}/{id?}",
     defaults: new { controller = "Admin" });

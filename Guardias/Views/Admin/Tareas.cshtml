@@ -80,23 +80,23 @@
                         <td style="color:var(--text2);">@(t.Guardia?.Nombre ?? "Todos")</td>
                         <td style="color:var(--text2);">@(t.Edificio?.Nombre ?? "—")</td>
                         <td>
-                            @switch (t.Estado)
+                            @if (t.CompletadaHoy)
                             {
-                                case Guardias.Models.EstadoTarea.Pendiente:
-                                    <span class="badge-ios badge-open">Pendiente</span>
-                                    break;
-                                case Guardias.Models.EstadoTarea.EnProceso:
-                                    <span class="badge-ios badge-process">En proceso</span>
-                                    break;
-                                case Guardias.Models.EstadoTarea.Completada:
-                                    <span class="badge-ios badge-done">Completada</span>
-                                    break;
+                                <span class="badge-ios badge-done">✓ Hoy @t.FechaCompletada!.Value.ToString("HH:mm")</span>
+                            }
+                            else
+                            {
+                                <span class="badge-ios badge-open">Pendiente hoy</span>
                             }
                         </td>
                         <td>
                             <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                <a href="/Admin/DetalleTarea/@t.Id" class="btn-admin btn-admin-secondary" style="padding:6px 12px;font-size:13px;">
+                                    <i class="bi bi-folder2-open"></i>
+                                    @if (t.Archivos.Any()) { <span>@t.Archivos.Count</span> }
+                                </a>
                                 <a href="/Admin/EditarTarea/@t.Id" class="btn-admin btn-admin-secondary" style="padding:6px 12px;font-size:13px;">
-                                    <i class="bi bi-pencil"></i> Editar
+                                    <i class="bi bi-pencil"></i>
                                 </a>
                                 <form id="del-tarea-@t.Id" method="post" asp-controller="Admin" asp-action="EliminarTarea" asp-route-id="@t.Id" style="display:inline;">
                                     @Html.AntiForgeryToken()

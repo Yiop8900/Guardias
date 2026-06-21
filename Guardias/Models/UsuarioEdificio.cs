@@ -16,8 +16,17 @@ public class UsuarioEdificio
 
     public string? PasswordPlain { get; set; }
 
+    [Display(Name = "Rol")]
+    public RolUsuario? Rol { get; set; }
+
     [Display(Name = "Administrador")]
     public bool EsAdmin { get; set; } = false;
+
+    // Admin principal creado junto con la empresa, no cuenta contra el límite
+    public bool EsPropietario { get; set; } = false;
+
+    [Display(Name = "Empresa")]
+    public int? EmpresaId { get; set; }
 
     [Display(Name = "Edificio")]
     public int? EdificioId { get; set; }
@@ -26,5 +35,11 @@ public class UsuarioEdificio
     public bool Activo { get; set; } = true;
 
     [JsonIgnore]
+    public EmpresaAdministradora? Empresa { get; set; }
+
+    [JsonIgnore]
     public Edificio? Edificio { get; set; }
+
+    public RolUsuario RolEfectivo =>
+        Rol ?? (EsAdmin ? RolUsuario.Admin : RolUsuario.Guardia);
 }

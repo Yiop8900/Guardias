@@ -1,0 +1,73 @@
+@model Guardias.Models.EmpresaAdministradora
+@{
+    Layout = "_SuperAdminLayout";
+    ViewData["Title"] = "Editar Empresa";
+    ViewData["SASection"] = "empresas";
+}
+
+<div style="margin-bottom:16px;">
+    <a href="/SuperAdmin/Empresas" class="btn-admin btn-admin-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<div class="admin-card" style="max-width:560px;">
+    <div style="font-weight:600;font-size:17px;margin-bottom:20px;display:flex;align-items:center;gap:8px;">
+        <i class="bi bi-pencil-square" style="color:#7B1FA2;"></i> Editar empresa
+    </div>
+
+    @if (ViewContext.ModelState.ErrorCount > 0)
+    {
+        <div class="alert-ios alert-error" style="margin-bottom:14px;">
+            @foreach (var entry in ViewContext.ModelState.Values)
+            {
+                foreach (var e in entry.Errors)
+                {
+                    <div>@e.ErrorMessage</div>
+                }
+            }
+        </div>
+    }
+
+    <form method="post" asp-controller="SuperAdmin" asp-action="EditarEmpresa" asp-route-id="@Model.Id">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="Id" value="@Model.Id" />
+        <input type="hidden" name="FechaCreacion" value="@Model.FechaCreacion.ToString("o")" />
+
+        <div class="form-admin-group">
+            <label class="form-admin-label">Nombre de la empresa <span style="color:red;">*</span></label>
+            <input type="text" name="Nombre" class="form-admin-control"
+                   value="@Model.Nombre" required maxlength="150" />
+        </div>
+
+        <div class="form-admin-group">
+            <label class="form-admin-label">Descripción</label>
+            <input type="text" name="Descripcion" class="form-admin-control"
+                   value="@Model.Descripcion" maxlength="300" />
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="form-admin-group">
+                <label class="form-admin-label">Límite de administradores <span style="color:red;">*</span></label>
+                <input type="number" name="LimiteAdmins" class="form-admin-control"
+                       value="@Model.LimiteAdmins" min="1" max="100" required />
+            </div>
+            <div class="form-admin-group">
+                <label class="form-admin-label">Límite de edificios <span style="color:red;">*</span></label>
+                <input type="number" name="LimiteEdificios" class="form-admin-control"
+                       value="@Model.LimiteEdificios" min="1" max="500" required />
+            </div>
+        </div>
+
+        <div class="form-admin-group" style="display:flex;align-items:center;gap:10px;">
+            <input type="checkbox" name="Activa" id="activa" value="true"
+                   @(Model.Activa ? "checked" : "") />
+            <label for="activa" style="font-size:14px;margin:0;">Empresa activa</label>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px;">
+            <button type="submit" class="btn-admin btn-admin-primary" style="padding:10px 24px;">
+                <i class="bi bi-floppy"></i> Guardar cambios
+            </button>
+            <a href="/SuperAdmin/Empresas" class="btn-admin btn-admin-secondary" style="padding:10px 20px;">Cancelar</a>
+        </div>
+    </form>
+</div>

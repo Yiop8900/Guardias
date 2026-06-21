@@ -6,24 +6,26 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-    <title>Iniciar sesión — Control de Ronda</title>
-    <link rel="icon" type="image/png" href="~/favicon.png" />
+    <title>Iniciar sesión — OperApp</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="~/img/LogoOperapp.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="~/img/LogoOperapp.png" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/mobile.css" asp-append-version="true" />
     <style>
         body { background: var(--bg); display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
         .login-card { background: #fff; border-radius: 20px; padding: 36px 28px; width: 100%; max-width: 380px; box-shadow: 0 4px 24px rgba(0,0,0,0.10); }
-        .login-icon { width: 72px; height: 72px; background: var(--blue); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 34px; color: #fff; margin: 0 auto 20px; }
-        .login-title { text-align: center; font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+        .login-icon { width: 90px; height: 90px; border-radius: 22px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; overflow:hidden; }
+        .login-icon img { width:100%; height:100%; object-fit:contain; }
+        .login-title { text-align: center; font-size: 26px; font-weight: 800; margin-bottom: 4px; background: linear-gradient(135deg, #2563EB, #7C3AED, #EC4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         .login-sub { text-align: center; color: var(--text2); font-size: 14px; margin-bottom: 28px; }
-        .login-hint { background: #f0f4ff; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #3a5fc8; margin-top: 20px; }
+        .login-hint { background: #eff6ff; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #2563EB; margin-top: 20px; }
     </style>
 </head>
 <body>
     <div class="login-card">
-        <div class="login-icon"><i class="bi bi-shield-fill-check"></i></div>
-        <div class="login-title">Control de Ronda</div>
+        <div class="login-icon"><img src="~/img/LogoOperapp.jpeg" alt="OperApp" /></div>
+        <div class="login-title">OperApp</div>
         <div class="login-sub">Inicia sesión para continuar</div>
 
         @if (ViewContext.ModelState.ErrorCount > 0)

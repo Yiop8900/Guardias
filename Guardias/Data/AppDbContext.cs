@@ -8,12 +8,14 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
+    public DbSet<EmpresaAdministradora> EmpresasAdministradoras { get; set; }
     public DbSet<Edificio> Edificios { get; set; }
     public DbSet<Guardia> Guardias { get; set; }
     public DbSet<Ronda> Rondas { get; set; }
     public DbSet<FotoRonda> FotosRonda { get; set; }
     public DbSet<Incidencia> Incidencias { get; set; }
     public DbSet<Tarea> Tareas { get; set; }
+    public DbSet<TareaArchivo> TareaArchivos { get; set; }
     public DbSet<Area> Areas { get; set; }
     public DbSet<AreaRonda> AreaRondas { get; set; }
     public DbSet<UsuarioEdificio> UsuariosEdificio { get; set; }
@@ -52,6 +54,12 @@ public class AppDbContext : DbContext
             .HasForeignKey(t => t.EdificioId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        modelBuilder.Entity<TareaArchivo>()
+            .HasOne(a => a.Tarea)
+            .WithMany(t => t.Archivos)
+            .HasForeignKey(a => a.TareaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder.Entity<Area>()
             .HasOne(a => a.Edificio)
             .WithMany(e => e.Areas)
@@ -89,8 +97,20 @@ public class AppDbContext : DbContext
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<UsuarioEdificio>()
+            .HasOne(u => u.Empresa)
+            .WithMany(e => e.Usuarios)
+            .HasForeignKey(u => u.EmpresaId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<UsuarioEdificio>()
             .HasIndex(u => u.NombreUsuario)
             .IsUnique();
+
+        modelBuilder.Entity<Edificio>()
+            .HasOne(e => e.Empresa)
+            .WithMany(em => em.Edificios)
+            .HasForeignKey(e => e.EmpresaId)
+            .OnDelete(DeleteBehavior.SetNull);
 
     }
 

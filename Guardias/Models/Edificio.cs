@@ -19,6 +19,12 @@ public class Edificio
     [Display(Name = "Activo")]
     public bool Activo { get; set; } = true;
 
+    [Display(Name = "Empresa")]
+    public int? EmpresaId { get; set; }
+
+    [JsonIgnore]
+    public EmpresaAdministradora? Empresa { get; set; }
+
     [JsonIgnore]
     public ICollection<Guardia> Guardias { get; set; } = new List<Guardia>();
 

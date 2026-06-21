@@ -1,0 +1,91 @@
+@model Guardias.Models.EmpresaAdministradora
+@{
+    Layout = "_SuperAdminLayout";
+    ViewData["Title"] = "Nueva Empresa";
+    ViewData["SASection"] = "empresas";
+}
+
+<div style="margin-bottom:16px;">
+    <a href="/SuperAdmin/Empresas" class="btn-admin btn-admin-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<div class="admin-card" style="max-width:560px;">
+    <div style="font-weight:600;font-size:17px;margin-bottom:20px;display:flex;align-items:center;gap:8px;">
+        <i class="bi bi-building-gear" style="color:#7B1FA2;"></i> Nueva empresa administradora
+    </div>
+
+    @if (ViewContext.ModelState.ErrorCount > 0)
+    {
+        <div class="alert-ios alert-error" style="margin-bottom:14px;">
+            @foreach (var entry in ViewContext.ModelState.Values)
+            {
+                foreach (var e in entry.Errors)
+                {
+                    <div>@e.ErrorMessage</div>
+                }
+            }
+        </div>
+    }
+
+    <form method="post" asp-controller="SuperAdmin" asp-action="CrearEmpresa">
+        @Html.AntiForgeryToken()
+
+        <div class="form-admin-group">
+            <label class="form-admin-label">Nombre de la empresa <span style="color:red;">*</span></label>
+            <input type="text" name="Nombre" class="form-admin-control"
+                   placeholder="Ej: Administradora El Bosque" required maxlength="150" />
+        </div>
+
+        <div class="form-admin-group">
+            <label class="form-admin-label">Descripción</label>
+            <input type="text" name="Descripcion" class="form-admin-control"
+                   placeholder="Descripción opcional" maxlength="300" />
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="form-admin-group">
+                <label class="form-admin-label">Límite de administradores <span style="color:red;">*</span></label>
+                <input type="number" name="LimiteAdmins" class="form-admin-control"
+                       value="5" min="1" max="100" required />
+                <div style="font-size:12px;color:var(--text2);margin-top:4px;">Máx. cuentas Admin por empresa</div>
+            </div>
+            <div class="form-admin-group">
+                <label class="form-admin-label">Límite de edificios <span style="color:red;">*</span></label>
+                <input type="number" name="LimiteEdificios" class="form-admin-control"
+                       value="10" min="1" max="500" required />
+                <div style="font-size:12px;color:var(--text2);margin-top:4px;">Máx. edificios por empresa</div>
+            </div>
+        </div>
+
+        <div class="form-admin-group" style="display:flex;align-items:center;gap:10px;">
+            <input type="checkbox" name="Activa" id="activa" value="true" checked />
+            <label for="activa" style="font-size:14px;margin:0;">Empresa activa</label>
+        </div>
+
+        <div style="margin:20px 0 16px;padding-top:16px;border-top:1px solid var(--sep);">
+            <div style="font-weight:600;font-size:15px;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+                <i class="bi bi-person-badge" style="color:var(--orange);"></i> Administrador de la empresa
+                <span style="font-size:12px;font-weight:400;color:var(--text2);">(no incluido en el límite)</span>
+            </div>
+
+            <div class="form-admin-group">
+                <label class="form-admin-label">Usuario administrador <span style="color:red;">*</span></label>
+                <input type="text" name="adminUsuario" class="form-admin-control"
+                       placeholder="Ej: admin.bosque" autocomplete="off" required />
+            </div>
+
+            <div class="form-admin-group">
+                <label class="form-admin-label">Contraseña <span style="color:red;">*</span></label>
+                <input type="password" name="adminPassword" class="form-admin-control"
+                       placeholder="Mínimo 4 caracteres" autocomplete="new-password" minlength="4" required />
+            </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px;">
+            <button type="submit" class="btn-admin btn-admin-primary" style="padding:10px 24px;">
+                <i class="bi bi-building-gear"></i> Crear empresa
+            </button>
+            <a href="/SuperAdmin/Empresas" class="btn-admin btn-admin-secondary" style="padding:10px 20px;">Cancelar</a>
+        </div>
+    </form>
+</div>

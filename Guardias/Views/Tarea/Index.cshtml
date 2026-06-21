@@ -2,22 +2,27 @@
 @{
     ViewData["ActiveTab"] = "tareas";
     int pendientes = ViewBag.TotalPendientes;
+    int total = Model.Count;
+    int completadas = Model.Count(t => t.CompletadaHoy);
 }
 
 <div class="page-header">
-    <h2>Tareas</h2>
-    <p>@pendientes tarea(s) pendiente(s)</p>
+    <h2>Tareas de hoy</h2>
+    <p>@completadas de @total completadas</p>
 </div>
 
 @if (pendientes > 0)
 {
-    <div class="pending-section">
-        <div class="section-header">
-            <span class="section-title"><i class="bi bi-clock-history me-2" style="color:var(--orange);"></i>Pendientes (@pendientes)</span>
-        </div>
-        <div style="background:#FFF8E1;border-radius:12px;padding:12px 16px;font-size:14px;color:#E65100;display:flex;align-items:center;gap:8px;">
-            <i class="bi bi-exclamation-circle-fill"></i> Tienes tareas pendientes por completar
-        </div>
+    <div style="background:#FFF8E1;border-radius:12px;padding:12px 16px;font-size:14px;color:#E65100;
+                display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+        <i class="bi bi-exclamation-circle-fill"></i> @pendientes tarea(s) pendiente(s) hoy
+    </div>
+}
+else if (total > 0)
+{
+    <div style="background:#E8F5E9;border-radius:12px;padding:12px 16px;font-size:14px;color:#2E7D32;
+                display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+        <i class="bi bi-check-circle-fill"></i> ¡Todas las tareas de hoy completadas!
     </div>
 }
 
@@ -33,23 +38,25 @@ else
 {
     foreach (var tarea in Model)
     {
-        <div class="task-card">
+        var cardStyle = tarea.CompletadaHoy ? "opacity:0.65;" : "";
+        <div class="task-card" style="@cardStyle">
             <div class="task-card-top">
-                <div>
-                    <div class="task-title">@tarea.Titulo</div>
+                <div style="flex:1;min-width:0;">
+                    <div class="task-title" style="@(tarea.CompletadaHoy ? "text-decoration:line-through;color:var(--text2);" : "")">
+                        @tarea.Titulo
+                    </div>
                     @if (!string.IsNullOrWhiteSpace(tarea.Descripcion))
                     {
                         <div class="task-desc">@tarea.Descripcion</div>
                     }
                 </div>
-                @switch (tarea.Estado)
+                @if (tarea.CompletadaHoy)
                 {
-                    case Guardias.Models.EstadoTarea.Pendiente:
-                        <span class="badge-ios badge-open" style="flex-shrink:0;">Pendiente</span>
-                        break;
-                    case Guardias.Models.EstadoTarea.EnProceso:
-                        <span class="badge-ios badge-process" style="flex-shrink:0;">En proceso</span>
-                        break;
+                    <span class="badge-ios badge-done" style="flex-shrink:0;">✓ Hoy</span>
+                }
+                else
+                {
+                    <span class="badge-ios badge-open" style="flex-shrink:0;">Pendiente</span>
                 }
             </div>
             <div class="task-meta">
@@ -62,22 +69,45 @@ else
                       tarea.Turno == Guardias.Models.Turno.Tarde ? "Tarde" :
                       tarea.Turno == Guardias.Models.Turno.Noche ? "Noche" : "Todos los turnos")
                 </span>
-                @if (tarea.Guardia != null)
+                @if (tarea.CompletadaHoy && tarea.FechaCompletada.HasValue)
                 {
-                    <span><i class="bi bi-person me-1"></i>@tarea.Guardia.Nombre</span>
-                }
-                @if (tarea.Edificio != null)
-                {
-                    <span><i class="bi bi-building me-1"></i>@tarea.Edificio.Nombre</span>
+                    <span style="color:var(--green);"><i class="bi bi-check2 me-1"></i>@tarea.FechaCompletada.Value.ToString("HH:mm")</span>
                 }
             </div>
-            <div style="margin-top:12px;">
-                <form method="post" asp-controller="Tarea" asp-action="Completar" asp-route-id="@tarea.Id" style="display:inline;">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="btn-admin btn-admin-success" style="font-size:13px;padding:7px 14px;">
-                        <i class="bi bi-check2"></i> Marcar completada
-                    </button>
-                </form>
+            <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+                <a href="/Tarea/Detalle/@tarea.Id"
+                   style="flex:1;text-align:center;padding:9px 14px;font-size:13px;text-decoration:none;
+                          border-radius:12px;font-weight:600;
+                          background:@(tarea.CompletadaHoy ? "#F1F5F9" : "var(--gradient)");
+                          color:@(tarea.CompletadaHoy ? "var(--text2)" : "#fff");">
+                    <i class="bi bi-folder2-open"></i> Abrir
+                    @if (tarea.Archivos.Any())
+                    {
+                        <span style="background:rgba(0,0,0,0.15);border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px;">@tarea.Archivos.Count</span>
+                    }
+                </a>
+                @if (!tarea.CompletadaHoy)
+                {
+                    if (tarea.Archivos.Any())
+                    {
+                        <form method="post" asp-controller="Tarea" asp-action="Completar" asp-route-id="@tarea.Id">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" title="Marcar completada"
+                                    style="background:#E8F5E9;border:none;border-radius:12px;padding:9px 16px;
+                                           font-size:16px;color:#2E7D32;cursor:pointer;">
+                                <i class="bi bi-check2"></i>
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <a href="/Tarea/Detalle/@tarea.Id" title="Adjunta un archivo antes de completar"
+                           style="background:#FEE2E2;border:none;border-radius:12px;padding:9px 16px;
+                                  font-size:16px;color:#DC2626;cursor:pointer;display:flex;align-items:center;text-decoration:none;">
+                            <i class="bi bi-paperclip"></i>
+                        </a>
+                    }
+                }
             </div>
         </div>
     }

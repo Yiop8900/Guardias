@@ -1,17 +1,23 @@
+@using Guardias.Models
+@using System.Security.Claims
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Crear Usuario";
     ViewData["AdminSection"] = "usuarios";
     var edificios = ViewBag.EdificiosList as List<Guardias.Models.Edificio>;
+    var empresas = ViewBag.EmpresasList as List<Guardias.Models.EmpresaAdministradora>;
+    bool esSuperAdmin = User.IsInRole("SuperAdmin");
+    var rolReal = User.FindFirstValue("Rol");
+    bool puedeCrearAdmin = rolReal is "SuperAdmin" or "Admin";
 }
 
 <div style="margin-bottom:16px;">
     <a href="/Admin/Usuarios" class="btn-admin btn-admin-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
 </div>
 
-<div class="admin-card" style="max-width:520px;">
+<div class="admin-card" style="max-width:560px;">
     <div style="font-weight:600;font-size:17px;margin-bottom:20px;display:flex;align-items:center;gap:8px;">
-        <i class="bi bi-person-plus" style="color:var(--blue);"></i> Nuevo usuario de edificio
+        <i class="bi bi-person-plus" style="color:var(--blue);"></i> Nuevo usuario
     </div>
 
     @if (ViewContext.ModelState.ErrorCount > 0)
@@ -31,23 +37,38 @@
         @Html.AntiForgeryToken()
 
         <div class="form-admin-group">
-            <label class="form-admin-label">Tipo de usuario</label>
-            <div style="display:flex;gap:10px;">
-                <label class="tipo-pill" style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;border:1.5px solid var(--sep);border-radius:10px;cursor:pointer;">
-                    <input type="radio" name="EsAdmin" value="false" checked onchange="toggleTipo()" />
-                    <span><i class="bi bi-shield-lock me-1" style="color:var(--blue);"></i>Guardia de edificio</span>
-                </label>
-                <label class="tipo-pill" style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;border:1.5px solid var(--sep);border-radius:10px;cursor:pointer;">
-                    <input type="radio" name="EsAdmin" value="true" onchange="toggleTipo()" />
-                    <span><i class="bi bi-person-badge me-1" style="color:var(--orange);"></i>Administrador</span>
-                </label>
-            </div>
+            <label class="form-admin-label">Rol <span style="color:red;">*</span></label>
+            <select name="Rol" id="rol-select" class="form-admin-control" onchange="toggleCamposPorRol()" required>
+                <option value="">— Selecciona un rol —</option>
+                @if (puedeCrearAdmin)
+                {
+                    <option value="@((int)RolUsuario.Admin)">Administrador</option>
+                }
+                <option value="@((int)RolUsuario.JefeOperaciones)">Jefe de Operaciones</option>
+                <option value="@((int)RolUsuario.Mayordomo)">Mayordomo</option>
+                <option value="@((int)RolUsuario.Conserje)">Conserje</option>
+                <option value="@((int)RolUsuario.Guardia)">Guardia</option>
+            </select>
         </div>
+
+        @if (esSuperAdmin && empresas != null)
+        {
+            <div class="form-admin-group">
+                <label class="form-admin-label">Empresa <span style="color:red;">*</span></label>
+                <select name="EmpresaId" id="empresa-select" class="form-admin-control">
+                    <option value="">— Selecciona empresa —</option>
+                    @foreach (var emp in empresas)
+                    {
+                        <option value="@emp.Id">@emp.Nombre</option>
+                    }
+                </select>
+            </div>
+        }
 
         <div class="form-admin-group">
             <label class="form-admin-label">Nombre de usuario <span style="color:red;">*</span></label>
             <input type="text" name="NombreUsuario" class="form-admin-control"
-                   placeholder="Ej: torreA, guardia01" autocomplete="off" required />
+                   placeholder="Ej: torreA, jefe01" autocomplete="off" required />
         </div>
 
         <div class="form-admin-group">
@@ -58,15 +79,15 @@
 
         <div class="form-admin-group" id="edificio-group">
             <label class="form-admin-label">Edificio <span style="color:red;" class="edificio-req">*</span></label>
-            <select name="EdificioId" id="edificio-select" class="form-admin-control" required>
+            <select name="EdificioId" id="edificio-select" class="form-admin-control">
                 <option value="">— Selecciona edificio —</option>
-                @foreach (var e in edificios!)
+                @foreach (var e in edificios ?? new())
                 {
                     <option value="@e.Id">@e.Nombre</option>
                 }
             </select>
-            <div style="font-size:12px;color:var(--text2);margin-top:6px;" id="admin-hint" style="display:none;">
-                Los administradores no se asocian a un edificio.
+            <div style="font-size:12px;color:var(--text2);margin-top:6px;display:none;" id="no-edificio-hint">
+                Este rol no se asocia a un edificio específico.
             </div>
         </div>
 
@@ -86,25 +107,28 @@
 
 @section Scripts {
 <script>
-    function toggleTipo() {
-        var esAdmin = document.querySelector('input[name="EsAdmin"]:checked').value === 'true';
-        var group = document.getElementById('edificio-group');
-        var select = document.getElementById('edificio-select');
-        var hint = document.getElementById('admin-hint');
+    var rolesConEdificio = [@((int)RolUsuario.Mayordomo), @((int)RolUsuario.Conserje), @((int)RolUsuario.Guardia)];
+
+    function toggleCamposPorRol() {
+        var rol = parseInt(document.getElementById('rol-select').value);
+        var edificioGroup = document.getElementById('edificio-group');
+        var edificioSelect = document.getElementById('edificio-select');
+        var hint = document.getElementById('no-edificio-hint');
         var req = document.querySelector('.edificio-req');
-        if (esAdmin) {
-            select.required = false;
-            select.value = '';
-            select.style.display = 'none';
-            req.style.display = 'none';
-            hint.style.display = 'block';
-        } else {
-            select.required = true;
-            select.style.display = 'block';
-            req.style.display = 'inline';
+
+        if (rolesConEdificio.includes(rol)) {
+            edificioSelect.required = true;
+            edificioSelect.style.display = 'block';
             hint.style.display = 'none';
+            if (req) req.style.display = 'inline';
+        } else {
+            edificioSelect.required = false;
+            edificioSelect.value = '';
+            edificioSelect.style.display = 'none';
+            hint.style.display = 'block';
+            if (req) req.style.display = 'none';
         }
     }
-    toggleTipo();
+    toggleCamposPorRol();
 </script>
 }

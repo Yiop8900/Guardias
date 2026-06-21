@@ -1,0 +1,56 @@
+@{
+    Layout = "_SuperAdminLayout";
+    ViewData["Title"] = "Nuevo Super Admin";
+    ViewData["SASection"] = "superadmins";
+}
+
+<div style="margin-bottom:16px;">
+    <a href="/SuperAdmin/SuperAdmins" class="btn-admin btn-admin-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<div class="admin-card" style="max-width:480px;">
+    <div style="font-weight:600;font-size:17px;margin-bottom:20px;display:flex;align-items:center;gap:8px;">
+        <i class="bi bi-shield-plus" style="color:#7B1FA2;"></i> Nuevo Super Admin
+    </div>
+
+    @if (ViewContext.ModelState.ErrorCount > 0)
+    {
+        <div class="alert-ios alert-error" style="margin-bottom:14px;">
+            @foreach (var entry in ViewContext.ModelState.Values)
+            {
+                foreach (var e in entry.Errors)
+                {
+                    <div>@e.ErrorMessage</div>
+                }
+            }
+        </div>
+    }
+
+    <form method="post" asp-controller="SuperAdmin" asp-action="CrearSuperAdmin">
+        @Html.AntiForgeryToken()
+
+        <div class="form-admin-group">
+            <label class="form-admin-label">Nombre de usuario <span style="color:red;">*</span></label>
+            <input type="text" name="NombreUsuario" class="form-admin-control"
+                   placeholder="Ej: superadmin2" autocomplete="off" required />
+        </div>
+
+        <div class="form-admin-group">
+            <label class="form-admin-label">Contraseña <span style="color:red;">*</span></label>
+            <input type="password" name="password" class="form-admin-control"
+                   placeholder="Mínimo 4 caracteres" autocomplete="new-password" minlength="4" required />
+        </div>
+
+        <div class="form-admin-group" style="display:flex;align-items:center;gap:10px;">
+            <input type="checkbox" name="Activo" id="activo" value="true" checked />
+            <label for="activo" style="font-size:14px;margin:0;">Usuario activo</label>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px;">
+            <button type="submit" class="btn-admin btn-admin-primary" style="padding:10px 24px;">
+                <i class="bi bi-shield-plus"></i> Crear Super Admin
+            </button>
+            <a href="/SuperAdmin/SuperAdmins" class="btn-admin btn-admin-secondary" style="padding:10px 20px;">Cancelar</a>
+        </div>
+    </form>
+</div>

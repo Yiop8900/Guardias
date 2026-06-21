@@ -1,0 +1,142 @@
+@model Guardias.Models.Tarea
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = Model.Titulo;
+    ViewData["AdminSection"] = "tareas";
+    var fotos = Model.Archivos.Where(a => a.EsImagen).ToList();
+    var docs = Model.Archivos.Where(a => !a.EsImagen).ToList();
+}
+
+<div style="margin-bottom:16px;">
+    <a href="/Admin/Tareas" class="btn-admin btn-admin-secondary"><i class="bi bi-arrow-left"></i> Volver a tareas</a>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px;">
+
+    <!-- Info de la tarea -->
+    <div class="admin-card">
+        <div style="font-size:18px;font-weight:700;margin-bottom:6px;">@Model.Titulo</div>
+        @if (!string.IsNullOrWhiteSpace(Model.Descripcion))
+        {
+            <p style="color:var(--text2);font-size:14px;margin-bottom:12px;">@Model.Descripcion</p>
+        }
+
+        <table style="font-size:13px;width:100%;border-collapse:collapse;">
+            <tr><td style="padding:5px 0;color:var(--text2);width:120px;">Estado</td>
+                <td>
+                    @switch (Model.Estado)
+                    {
+                        case Guardias.Models.EstadoTarea.Pendiente:
+                            <span class="badge-ios badge-open">Pendiente</span> break;
+                        case Guardias.Models.EstadoTarea.EnProceso:
+                            <span class="badge-ios badge-process">En proceso</span> break;
+                        case Guardias.Models.EstadoTarea.Completada:
+                            <span class="badge-ios badge-done">Completada</span> break;
+                    }
+                </td>
+            </tr>
+            @if (Model.HoraProgramada.HasValue)
+            {
+                <tr><td style="padding:5px 0;color:var(--text2);">Hora</td>
+                    <td style="font-weight:500;">@Model.HoraProgramada.Value.ToString("HH:mm")</td></tr>
+            }
+            <tr><td style="padding:5px 0;color:var(--text2);">Turno</td>
+                <td>@(Model.Turno == Guardias.Models.Turno.Manana ? "Mañana" :
+                       Model.Turno == Guardias.Models.Turno.Tarde ? "Tarde" :
+                       Model.Turno == Guardias.Models.Turno.Noche ? "Noche" : "Todos")</td></tr>
+            @if (Model.Guardia != null)
+            {
+                <tr><td style="padding:5px 0;color:var(--text2);">Guardia</td>
+                    <td>@Model.Guardia.Nombre</td></tr>
+            }
+            @if (Model.Edificio != null)
+            {
+                <tr><td style="padding:5px 0;color:var(--text2);">Edificio</td>
+                    <td>@Model.Edificio.Nombre</td></tr>
+            }
+            <tr><td style="padding:5px 0;color:var(--text2);">Archivos</td>
+                <td><strong>@Model.Archivos.Count</strong> adjunto(s)</td></tr>
+        </table>
+    </div>
+
+    <!-- Resumen adjuntos -->
+    <div class="admin-card">
+        <div style="font-weight:600;font-size:15px;margin-bottom:12px;">
+            <i class="bi bi-paperclip" style="color:var(--blue);"></i> Adjuntos
+        </div>
+        @if (!Model.Archivos.Any())
+        {
+            <div style="text-align:center;padding:24px;color:var(--text2);">
+                <i class="bi bi-paperclip" style="font-size:32px;display:block;opacity:0.3;margin-bottom:8px;"></i>
+                Sin archivos adjuntos
+            </div>
+        }
+        else
+        {
+            <div style="font-size:13px;color:var(--text2);margin-bottom:10px;">
+                @fotos.Count foto(s) · @docs.Count documento(s)
+            </div>
+            <a href="#fotos" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#F0FDF4;border-radius:10px;text-decoration:none;color:#16A34A;font-weight:600;font-size:13px;margin-bottom:8px;">
+                <i class="bi bi-images"></i> Ver fotos
+            </a>
+            <a href="#docs" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#FFF7ED;border-radius:10px;text-decoration:none;color:#EA580C;font-weight:600;font-size:13px;">
+                <i class="bi bi-file-earmark-text"></i> Ver documentos
+            </a>
+        }
+    </div>
+</div>
+
+<!-- Galería de fotos -->
+@if (fotos.Any())
+{
+    <div id="fotos" class="admin-card" style="margin-top:16px;max-width:900px;">
+        <div style="font-weight:600;font-size:15px;margin-bottom:14px;">
+            <i class="bi bi-images" style="color:var(--green);"></i> Fotos (@fotos.Count)
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;">
+            @foreach (var foto in fotos)
+            {
+                <div style="position:relative;">
+                    <a href="~/uploads/tareas/@foto.NombreArchivo" target="_blank">
+                        <img src="~/uploads/tareas/@foto.NombreArchivo"
+                             style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;cursor:zoom-in;" />
+                    </a>
+                    <div style="font-size:10px;color:var(--text2);margin-top:4px;text-align:center;">
+                        @foto.SubidoPor · @foto.FechaSubida.ToString("dd/MM HH:mm")
+                    </div>
+                    <a href="~/uploads/tareas/@foto.NombreArchivo" download="@foto.NombreOriginal"
+                       style="display:block;text-align:center;font-size:11px;color:var(--blue);margin-top:2px;">
+                        <i class="bi bi-download"></i> Descargar
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<!-- Lista de documentos -->
+@if (docs.Any())
+{
+    <div id="docs" class="admin-card" style="margin-top:16px;max-width:900px;">
+        <div style="font-weight:600;font-size:15px;margin-bottom:14px;">
+            <i class="bi bi-file-earmark-text" style="color:var(--orange);"></i> Documentos (@docs.Count)
+        </div>
+        @foreach (var doc in docs)
+        {
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;
+                         padding:12px 14px;background:var(--bg);border-radius:10px;margin-bottom:8px;">
+                <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+                    <i class="bi bi-file-earmark-pdf" style="font-size:28px;color:var(--orange);flex-shrink:0;"></i>
+                    <div style="min-width:0;">
+                        <div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@doc.NombreOriginal</div>
+                        <div style="font-size:12px;color:var(--text2);">Subido por @doc.SubidoPor · @doc.FechaSubida.ToString("dd/MM/yyyy HH:mm")</div>
+                    </div>
+                </div>
+                <a href="~/uploads/tareas/@doc.NombreArchivo" download="@doc.NombreOriginal"
+                   class="btn-admin btn-admin-secondary" style="padding:7px 14px;font-size:13px;white-space:nowrap;flex-shrink:0;">
+                    <i class="bi bi-download"></i> Descargar
+                </a>
+            </div>
+        }
+    </div>
+}

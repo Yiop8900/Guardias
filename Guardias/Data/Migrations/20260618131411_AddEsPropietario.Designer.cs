@@ -4,6 +4,7 @@ using Guardias.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Guardias.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260618131411_AddEsPropietario")]
+    partial class AddEsPropietario
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -319,9 +322,6 @@ namespace Guardias.Data.Migrations
                     b.Property<int>("Estado")
                         .HasColumnType("int");
 
-                    b.Property<DateTime?>("FechaCompletada")
-                        .HasColumnType("datetime2");
-
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
@@ -346,46 +346,6 @@ namespace Guardias.Data.Migrations
                     b.HasIndex("GuardiaId");
 
                     b.ToTable("Tareas");
-                });
-
-            modelBuilder.Entity("Guardias.Models.TareaArchivo", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("EsImagen")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("FechaSubida")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("NombreArchivo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("NombreOriginal")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SubidoPor")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("TareaId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("TipoMime")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TareaId");
-
-                    b.ToTable("TareaArchivos");
                 });
 
             modelBuilder.Entity("Guardias.Models.UsuarioEdificio", b =>
@@ -552,17 +512,6 @@ namespace Guardias.Data.Migrations
                     b.Navigation("Guardia");
                 });
 
-            modelBuilder.Entity("Guardias.Models.TareaArchivo", b =>
-                {
-                    b.HasOne("Guardias.Models.Tarea", "Tarea")
-                        .WithMany("Archivos")
-                        .HasForeignKey("TareaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tarea");
-                });
-
             modelBuilder.Entity("Guardias.Models.UsuarioEdificio", b =>
                 {
                     b.HasOne("Guardias.Models.Edificio", "Edificio")
@@ -624,11 +573,6 @@ namespace Guardias.Data.Migrations
                     b.Navigation("AreaRondas");
 
                     b.Navigation("Incidencias");
-                });
-
-            modelBuilder.Entity("Guardias.Models.Tarea", b =>
-                {
-                    b.Navigation("Archivos");
                 });
 #pragma warning restore 612, 618
         }

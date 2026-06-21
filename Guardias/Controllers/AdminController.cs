@@ -3,12 +3,13 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using Guardias.Data;
 using Guardias.Models;
 
 namespace Guardias.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin,Mayordomo")]
 public class AdminController : Controller
 {
     private readonly AppDbContext _context;
@@ -18,26 +19,62 @@ public class AdminController : Controller
         _context = context;
     }
 
+    // Retorna el EmpresaId del usuario autenticado; null = SuperAdmin (ve todo)
+    private int? GetEmpresaId()
+    {
+        var val = User.FindFirstValue("EmpresaId");
+        if (val == null || val == "0") return null;
+        return int.TryParse(val, out var id) ? id : null;
+    }
+
+    private bool EsSuperAdmin() => User.IsInRole("SuperAdmin");
+
+    // Retorna el EdificioId fijo del usuario (Mayordomo/Conserje); null = sin restricción de edificio
+    private int? GetEdificioIdFijo()
+    {
+        var val = User.FindFirstValue("EdificioId");
+        if (val == null || val == "0") return null;
+        return int.TryParse(val, out var id) ? id : null;
+    }
+
     // ===== DASHBOARD =====
     public async Task<IActionResult> Index()
     {
-        ViewBag.TotalGuardias = await _context.Guardias.CountAsync(g => g.Activo);
-        ViewBag.TotalEdificios = await _context.Edificios.CountAsync(e => e.Activo);
-        ViewBag.TotalRondas = await _context.Rondas.CountAsync();
-        ViewBag.RondasHoy = await _context.Rondas.CountAsync(r => r.FechaHora.Date == DateTime.Today);
-        ViewBag.IncidenciasAbiertas = await _context.Incidencias.CountAsync(i => i.Estado == EstadoIncidencia.Abierta);
-        ViewBag.TareasPendientes = await _context.Tareas.CountAsync(t => t.Estado == EstadoTarea.Pendiente);
-        ViewBag.RondasPendientesFirma = await _context.Rondas.CountAsync(r => r.Estado == EstadoRonda.Finalizada);
+        var empresaId = GetEmpresaId();
+
+        if (empresaId.HasValue)
+        {
+            ViewBag.TotalGuardias = await _context.Guardias.CountAsync(g => g.Activo && g.Edificio!.EmpresaId == empresaId.Value);
+            ViewBag.TotalEdificios = await _context.Edificios.CountAsync(e => e.Activo && e.EmpresaId == empresaId.Value);
+            ViewBag.TotalRondas = await _context.Rondas.CountAsync(r => r.Edificio!.EmpresaId == empresaId.Value);
+            ViewBag.RondasHoy = await _context.Rondas.CountAsync(r => r.FechaHora.Date == DateTime.Today && r.Edificio!.EmpresaId == empresaId.Value);
+            ViewBag.IncidenciasAbiertas = await _context.Incidencias.CountAsync(i => i.Estado == EstadoIncidencia.Abierta && i.Ronda!.Edificio!.EmpresaId == empresaId.Value);
+            ViewBag.TareasPendientes = await _context.Tareas.CountAsync(t => t.Estado == EstadoTarea.Pendiente && t.Edificio!.EmpresaId == empresaId.Value);
+            ViewBag.RondasPendientesFirma = await _context.Rondas.CountAsync(r => r.Estado == EstadoRonda.Finalizada && r.Edificio!.EmpresaId == empresaId.Value);
+        }
+        else
+        {
+            ViewBag.TotalGuardias = await _context.Guardias.CountAsync(g => g.Activo);
+            ViewBag.TotalEdificios = await _context.Edificios.CountAsync(e => e.Activo);
+            ViewBag.TotalRondas = await _context.Rondas.CountAsync();
+            ViewBag.RondasHoy = await _context.Rondas.CountAsync(r => r.FechaHora.Date == DateTime.Today);
+            ViewBag.IncidenciasAbiertas = await _context.Incidencias.CountAsync(i => i.Estado == EstadoIncidencia.Abierta);
+            ViewBag.TareasPendientes = await _context.Tareas.CountAsync(t => t.Estado == EstadoTarea.Pendiente);
+            ViewBag.RondasPendientesFirma = await _context.Rondas.CountAsync(r => r.Estado == EstadoRonda.Finalizada);
+        }
+
+        ViewBag.EmpresaId = empresaId;
         return View();
     }
 
     // ===== GUARDIAS =====
     public async Task<IActionResult> Guardias()
     {
-        var guardias = await _context.Guardias
-            .Include(g => g.Edificio)
-            .OrderBy(g => g.Nombre)
-            .ToListAsync();
+        var empresaId = GetEmpresaId();
+        var query = _context.Guardias.Include(g => g.Edificio).AsQueryable();
+        if (empresaId.HasValue)
+            query = query.Where(g => g.Edificio!.EmpresaId == empresaId.Value);
+        var guardias = await query.OrderBy(g => g.Nombre).ToListAsync();
         return View(guardias);
     }
 
@@ -103,16 +140,45 @@ public class AdminController : Controller
     // ===== EDIFICIOS =====
     public async Task<IActionResult> Edificios()
     {
-        var edificios = await _context.Edificios.OrderBy(e => e.Nombre).ToListAsync();
+        var empresaId = GetEmpresaId();
+        var query = _context.Edificios.Include(e => e.Empresa).AsQueryable();
+        if (empresaId.HasValue)
+            query = query.Where(e => e.EmpresaId == empresaId.Value);
+        var edificios = await query.OrderBy(e => e.Nombre).ToListAsync();
         return View(edificios);
     }
 
-    public IActionResult CrearEdificio() => View(new Edificio());
+    public async Task<IActionResult> CrearEdificio()
+    {
+        if (EsSuperAdmin()) await LoadEmpresasViewBag();
+        return View(new Edificio());
+    }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CrearEdificio(Edificio edificio)
     {
+        // Si no es SuperAdmin, asignar empresa automáticamente
+        if (!EsSuperAdmin())
+        {
+            var empresaId = GetEmpresaId();
+            edificio.EmpresaId = empresaId;
+        }
+
+        // Validar límite de edificios de la empresa
+        if (edificio.EmpresaId.HasValue)
+        {
+            var empresa = await _context.EmpresasAdministradoras.FindAsync(edificio.EmpresaId.Value);
+            if (empresa != null)
+            {
+                var totalEdificios = await _context.Edificios.CountAsync(e => e.EmpresaId == edificio.EmpresaId.Value);
+                if (totalEdificios >= empresa.LimiteEdificios)
+                {
+                    ModelState.AddModelError("", $"La empresa ha alcanzado el límite de {empresa.LimiteEdificios} edificios.");
+                }
+            }
+        }
+
         if (ModelState.IsValid)
         {
             _context.Edificios.Add(edificio);
@@ -120,6 +186,7 @@ public class AdminController : Controller
             TempData["Success"] = "Edificio creado correctamente.";
             return RedirectToAction("Edificios");
         }
+        if (EsSuperAdmin()) await LoadEmpresasViewBag();
         return View(edificio);
     }
 
@@ -198,7 +265,10 @@ public class AdminController : Controller
     // ===== ÁREAS =====
     public async Task<IActionResult> Areas(int? edificioId)
     {
+        var empresaId = GetEmpresaId();
         var query = _context.Areas.Include(a => a.Edificio).AsQueryable();
+        if (empresaId.HasValue)
+            query = query.Where(a => a.Edificio!.EmpresaId == empresaId.Value);
         if (edificioId.HasValue)
             query = query.Where(a => a.EdificioId == edificioId.Value);
 
@@ -274,9 +344,17 @@ public class AdminController : Controller
     // ===== USUARIOS =====
     public async Task<IActionResult> Usuarios()
     {
-        var usuarios = await _context.UsuariosEdificio
+        var empresaId = GetEmpresaId();
+        var query = _context.UsuariosEdificio
             .Include(u => u.Edificio)
-            .OrderBy(u => u.Edificio!.Nombre)
+            .Include(u => u.Empresa)
+            .AsQueryable();
+        if (empresaId.HasValue)
+            query = query.Where(u => u.EmpresaId == empresaId.Value);
+        else
+            query = query.Where(u => u.Rol != RolUsuario.SuperAdmin); // SuperAdmin no muestra sus propios cuentas aquí
+        var usuarios = await query
+            .OrderBy(u => u.Empresa!.Nombre)
             .ThenBy(u => u.NombreUsuario)
             .ToListAsync();
         return View(usuarios);
@@ -285,6 +363,7 @@ public class AdminController : Controller
     public async Task<IActionResult> CrearUsuario()
     {
         await LoadEdificiosViewBag();
+        if (EsSuperAdmin()) await LoadEmpresasViewBag();
         return View(new UsuarioEdificio());
     }
 
@@ -295,19 +374,59 @@ public class AdminController : Controller
         if (string.IsNullOrWhiteSpace(password) || password.Length < 4)
             ModelState.AddModelError("password", "La contraseña debe tener al menos 4 caracteres.");
 
-        // Check duplicate username
         if (await _context.UsuariosEdificio.AnyAsync(u => u.NombreUsuario == usuario.NombreUsuario))
             ModelState.AddModelError("NombreUsuario", "Ya existe un usuario con ese nombre.");
 
-        if (usuario.EsAdmin)
+        // Asignar empresa leyendo desde la BD (más confiable que el claim)
+        if (!EsSuperAdmin())
         {
-            // Los administradores no se asocian a un edificio
+            var nombreActual = User.Identity!.Name;
+            var usuarioActual = await _context.UsuariosEdificio
+                .FirstOrDefaultAsync(u => u.NombreUsuario == nombreActual);
+            usuario.EmpresaId = usuarioActual?.EmpresaId ?? GetEmpresaId();
+
+            if (!usuario.EmpresaId.HasValue)
+            {
+                ModelState.AddModelError("", "Tu cuenta no tiene una empresa asignada. Contacta al Super Admin.");
+                await LoadEdificiosViewBag();
+                if (EsSuperAdmin()) await LoadEmpresasViewBag();
+                return View(usuario);
+            }
+        }
+
+        var rolEfectivo = usuario.Rol ?? RolUsuario.Guardia;
+
+        // JefeOperaciones solo puede crear Mayordomo, Conserje y Guardia
+        var rolCreador = User.FindFirstValue("Rol");
+        if (rolCreador == "JefeOperaciones" && rolEfectivo == RolUsuario.Admin)
+        {
+            ModelState.AddModelError("", "El Jefe de Operaciones no puede crear administradores.");
+            await LoadEdificiosViewBag();
+            return View(usuario);
+        }
+
+        usuario.EsAdmin = rolEfectivo.TieneAccesoAdmin();
+
+        // Validar límite de admins (el propietario no cuenta)
+        if (rolEfectivo == RolUsuario.Admin && usuario.EmpresaId.HasValue)
+        {
+            var empresa = await _context.EmpresasAdministradoras.FindAsync(usuario.EmpresaId.Value);
+            if (empresa != null)
+            {
+                var totalAdmins = await _context.UsuariosEdificio.CountAsync(u =>
+                    u.EmpresaId == usuario.EmpresaId.Value &&
+                    !u.EsPropietario &&
+                    (u.Rol == RolUsuario.Admin || u.EsAdmin));
+                if (totalAdmins >= empresa.LimiteAdmins)
+                    ModelState.AddModelError("", $"La empresa ha alcanzado el límite de {empresa.LimiteAdmins} administradores.");
+            }
+        }
+
+        // Roles sin edificio: Admin, JefeOperaciones
+        if (rolEfectivo is RolUsuario.Admin or RolUsuario.JefeOperaciones)
             usuario.EdificioId = null;
-        }
         else if (usuario.EdificioId == null)
-        {
             ModelState.AddModelError("EdificioId", "Selecciona un edificio para el usuario.");
-        }
 
         if (ModelState.IsValid)
         {
@@ -320,6 +439,7 @@ public class AdminController : Controller
             return RedirectToAction("Usuarios");
         }
         await LoadEdificiosViewBag();
+        if (EsSuperAdmin()) await LoadEmpresasViewBag();
         return View(usuario);
     }
 
@@ -328,6 +448,7 @@ public class AdminController : Controller
         var usuario = await _context.UsuariosEdificio.FindAsync(id);
         if (usuario == null) return NotFound();
         await LoadEdificiosViewBag();
+        if (EsSuperAdmin()) await LoadEmpresasViewBag();
         return View(usuario);
     }
 
@@ -335,11 +456,11 @@ public class AdminController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditarUsuario(int id, UsuarioEdificio usuario, string? nuevaPassword)
     {
-        // Check duplicate username for other users
         if (await _context.UsuariosEdificio.AnyAsync(u => u.NombreUsuario == usuario.NombreUsuario && u.Id != id))
             ModelState.AddModelError("NombreUsuario", "Ya existe un usuario con ese nombre.");
 
-        if (!usuario.EsAdmin && usuario.EdificioId == null)
+        var rolEfectivo = usuario.Rol ?? RolUsuario.Guardia;
+        if (rolEfectivo is not (RolUsuario.Admin or RolUsuario.JefeOperaciones) && usuario.EdificioId == null)
             ModelState.AddModelError("EdificioId", "Selecciona un edificio para el usuario.");
 
         if (ModelState.IsValid)
@@ -348,8 +469,10 @@ public class AdminController : Controller
             if (existing == null) return NotFound();
 
             existing.NombreUsuario = usuario.NombreUsuario;
-            existing.EsAdmin = usuario.EsAdmin;
-            existing.EdificioId = usuario.EsAdmin ? null : usuario.EdificioId;
+            existing.Rol = usuario.Rol;
+            existing.EsAdmin = rolEfectivo.TieneAccesoAdmin();
+            existing.EdificioId = rolEfectivo is RolUsuario.Admin or RolUsuario.JefeOperaciones ? null : usuario.EdificioId;
+            existing.EmpresaId = EsSuperAdmin() ? usuario.EmpresaId : existing.EmpresaId;
             existing.Activo = usuario.Activo;
 
             if (!string.IsNullOrWhiteSpace(nuevaPassword) && nuevaPassword.Length >= 4)
@@ -364,6 +487,7 @@ public class AdminController : Controller
             return RedirectToAction("Usuarios");
         }
         await LoadEdificiosViewBag();
+        if (EsSuperAdmin()) await LoadEmpresasViewBag();
         return View(usuario);
     }
 
@@ -384,11 +508,18 @@ public class AdminController : Controller
     // ===== TAREAS =====
     public async Task<IActionResult> Tareas(int? edificioId)
     {
+        var empresaId = GetEmpresaId();
+        var edificioFijo = GetEdificioIdFijo();
+        if (edificioFijo.HasValue) edificioId = edificioFijo; // el edificio del usuario tiene prioridad
+
         var query = _context.Tareas
             .Include(t => t.Guardia)
             .Include(t => t.Edificio)
+            .Include(t => t.Archivos)
             .AsQueryable();
 
+        if (empresaId.HasValue)
+            query = query.Where(t => t.Edificio!.EmpresaId == empresaId.Value);
         if (edificioId.HasValue)
             query = query.Where(t => t.EdificioId == edificioId.Value);
 
@@ -466,9 +597,30 @@ public class AdminController : Controller
         return RedirectToAction("Tareas");
     }
 
+    public async Task<IActionResult> DetalleTarea(int id)
+    {
+        var empresaId = GetEmpresaId();
+        var query = _context.Tareas
+            .Include(t => t.Guardia)
+            .Include(t => t.Edificio)
+            .Include(t => t.Archivos)
+            .AsQueryable();
+
+        if (empresaId.HasValue)
+            query = query.Where(t => t.Edificio!.EmpresaId == empresaId.Value);
+
+        var tarea = await query.FirstOrDefaultAsync(t => t.Id == id);
+        if (tarea == null) return NotFound();
+        return View(tarea);
+    }
+
     // ===== RONDAS =====
     public async Task<IActionResult> Rondas(int? edificioId)
     {
+        var empresaId = GetEmpresaId();
+        var edificioFijo = GetEdificioIdFijo();
+        if (edificioFijo.HasValue) edificioId = edificioFijo;
+
         var query = _context.Rondas
             .Include(r => r.Guardia)
             .Include(r => r.Edificio)
@@ -476,6 +628,8 @@ public class AdminController : Controller
             .Include(r => r.Incidencias)
             .AsQueryable();
 
+        if (empresaId.HasValue)
+            query = query.Where(r => r.Edificio!.EmpresaId == empresaId.Value);
         if (edificioId.HasValue)
             query = query.Where(r => r.EdificioId == edificioId.Value);
 
@@ -557,6 +711,10 @@ public class AdminController : Controller
     // ===== INCIDENCIAS =====
     public async Task<IActionResult> Incidencias(int? edificioId)
     {
+        var empresaId = GetEmpresaId();
+        var edificioFijo = GetEdificioIdFijo();
+        if (edificioFijo.HasValue) edificioId = edificioFijo;
+
         var query = _context.Incidencias
             .Include(i => i.Ronda)
                 .ThenInclude(r => r!.Guardia)
@@ -564,6 +722,8 @@ public class AdminController : Controller
                 .ThenInclude(r => r!.Edificio)
             .AsQueryable();
 
+        if (empresaId.HasValue)
+            query = query.Where(i => i.Ronda!.Edificio!.EmpresaId == empresaId.Value);
         if (edificioId.HasValue)
             query = query.Where(i => i.Ronda!.EdificioId == edificioId.Value);
 
@@ -622,20 +782,31 @@ public class AdminController : Controller
     // ===== HELPERS =====
     private async Task LoadEdificiosViewBag()
     {
-        var edificios = await _context.Edificios
-            .Where(e => e.Activo)
-            .OrderBy(e => e.Nombre)
-            .ToListAsync();
+        var empresaId = GetEmpresaId();
+        var query = _context.Edificios.Where(e => e.Activo).AsQueryable();
+        if (empresaId.HasValue)
+            query = query.Where(e => e.EmpresaId == empresaId.Value);
+        var edificios = await query.OrderBy(e => e.Nombre).ToListAsync();
         ViewBag.Edificios = new SelectList(edificios, "Id", "Nombre");
-        ViewBag.EdificiosList = edificios; // List<Edificio> para vistas que iteran manualmente
+        ViewBag.EdificiosList = edificios;
     }
 
     private async Task LoadGuardiasViewBag()
     {
-        var guardias = await _context.Guardias
-            .Where(g => g.Activo)
-            .OrderBy(g => g.Nombre)
-            .ToListAsync();
+        var empresaId = GetEmpresaId();
+        var query = _context.Guardias.Where(g => g.Activo).AsQueryable();
+        if (empresaId.HasValue)
+            query = query.Where(g => g.Edificio!.EmpresaId == empresaId.Value);
+        var guardias = await query.Include(g => g.Edificio).OrderBy(g => g.Nombre).ToListAsync();
         ViewBag.GuardiasList = new SelectList(guardias, "Id", "Nombre");
+    }
+
+    private async Task LoadEmpresasViewBag()
+    {
+        var empresas = await _context.EmpresasAdministradoras
+            .Where(e => e.Activa)
+            .OrderBy(e => e.Nombre)
+            .ToListAsync();
+        ViewBag.EmpresasList = empresas;
     }
 }

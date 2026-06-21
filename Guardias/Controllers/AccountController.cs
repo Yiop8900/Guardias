@@ -24,10 +24,7 @@ public class AccountController : Controller
     public IActionResult Login(string? returnUrl = null)
     {
         if (User.Identity?.IsAuthenticated == true)
-        {
-            if (User.IsInRole("Admin")) return RedirectToAction("Index", "Admin");
-            return RedirectToAction("Historial", "Ronda");
-        }
+            return RedirectByRole();
         ViewBag.ReturnUrl = returnUrl;
         return View();
     }
@@ -44,27 +41,20 @@ public class AccountController : Controller
             return View();
         }
 
-        // Check admin credentials
+        // Credenciales del SuperAdmin global en appsettings
         var adminUser = _config["Admin:Usuario"] ?? "admin";
         var adminPass = _config["Admin:Password"] ?? "admin123";
 
         if (usuario == adminUser && password == adminPass)
         {
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Name, usuario),
-                new Claim(ClaimTypes.Role, "Admin"),
-                new Claim("EdificioId", "0"),
-                new Claim("EdificioNombre", "Administrador")
-            };
-            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
-            return RedirectToAction("Index", "Admin");
+            await SignInWithClaims(usuario, RolUsuario.SuperAdmin, empresaId: null, edificioId: null, edificioNombre: null);
+            return RedirectToAction("Index", "SuperAdmin");
         }
 
-        // Check building users
+        // Usuarios registrados en BD
         var usuarioEdificio = await _context.UsuariosEdificio
             .Include(u => u.Edificio)
+            .Include(u => u.Empresa)
             .Where(u => u.NombreUsuario == usuario && u.Activo)
             .FirstOrDefaultAsync();
 
@@ -74,33 +64,23 @@ public class AccountController : Controller
             var result = hasher.VerifyHashedPassword(usuarioEdificio, usuarioEdificio.PasswordHash, password);
             if (result == PasswordVerificationResult.Success || result == PasswordVerificationResult.SuccessRehashNeeded)
             {
-                if (usuarioEdificio.EsAdmin)
-                {
-                    var adminClaims = new List<Claim>
-                    {
-                        new Claim(ClaimTypes.Name, usuario),
-                        new Claim(ClaimTypes.Role, "Admin"),
-                        new Claim("EdificioId", "0"),
-                        new Claim("EdificioNombre", "Administrador")
-                    };
-                    var adminIdentity = new ClaimsIdentity(adminClaims, CookieAuthenticationDefaults.AuthenticationScheme);
-                    await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(adminIdentity));
-                    return RedirectToAction("Index", "Admin");
-                }
-
-                var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, usuario),
-                    new Claim(ClaimTypes.Role, "Guardia"),
-                    new Claim("EdificioId", usuarioEdificio.EdificioId?.ToString() ?? "0"),
-                    new Claim("EdificioNombre", usuarioEdificio.Edificio?.Nombre ?? "")
-                };
-                var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
+                var rol = usuarioEdificio.RolEfectivo;
+                await SignInWithClaims(
+                    usuario,
+                    rol,
+                    empresaId: usuarioEdificio.EmpresaId,
+                    edificioId: usuarioEdificio.EdificioId,
+                    edificioNombre: usuarioEdificio.Edificio?.Nombre);
 
                 if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                     return Redirect(returnUrl);
-                return RedirectToAction("Historial", "Ronda");
+
+                return rol switch
+                {
+                    RolUsuario.SuperAdmin => RedirectToAction("Index", "SuperAdmin"),
+                    RolUsuario.Admin or RolUsuario.JefeOperaciones or RolUsuario.Mayordomo => RedirectToAction("Index", "Admin"),
+                    _ => RedirectToAction("Historial", "Ronda")
+                };
             }
         }
 
@@ -114,5 +94,32 @@ public class AccountController : Controller
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return RedirectToAction("Login");
+    }
+
+    private async Task SignInWithClaims(string nombreUsuario, RolUsuario rol, int? empresaId, int? edificioId, string? edificioNombre)
+    {
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, nombreUsuario),
+            new Claim(ClaimTypes.Role, rol.ToString()),
+            new Claim("Rol", rol.ToString()),
+            new Claim("EmpresaId", empresaId?.ToString() ?? "0"),
+            new Claim("EdificioId", edificioId?.ToString() ?? "0"),
+            new Claim("EdificioNombre", edificioNombre ?? ""),
+        };
+
+        // Roles que acceden al panel Admin
+        if (rol.TieneAccesoAdmin() || rol == RolUsuario.Mayordomo)
+            claims.Add(new Claim(ClaimTypes.Role, "Admin"));
+
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
+    }
+
+    private IActionResult RedirectByRole()
+    {
+        if (User.IsInRole("SuperAdmin")) return RedirectToAction("Index", "SuperAdmin");
+        if (User.IsInRole("Admin")) return RedirectToAction("Index", "Admin");
+        return RedirectToAction("Historial", "Ronda");
     }
 }

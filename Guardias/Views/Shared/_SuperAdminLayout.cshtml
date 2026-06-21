@@ -1,77 +1,54 @@
-@using System.Security.Claims
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] — Admin · OperApp</title>
+    <title>@ViewData["Title"] — Super Admin · OperApp</title>
     <link rel="icon" type="image/png" sizes="32x32" href="~/img/LogoOperapp.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="~/img/LogoOperapp.png" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/mobile.css" asp-append-version="true" />
+    <style>
+        .sa-brand-badge { background: linear-gradient(135deg, #7B1FA2, #4A148C); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 8px; letter-spacing: 0.5px; text-transform: uppercase; }
+    </style>
 </head>
 <body style="background:var(--bg);">
 
 <div class="overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
 <div class="admin-wrapper">
-    <!-- Sidebar -->
     <aside class="admin-sidebar" id="adminSidebar">
-        <a href="/Admin" class="admin-sidebar-brand">
-            <div class="icon"><img src="~/img/LogoOperapp.jpeg" alt="OperApp" style="border-radius:8px;" /></div>
+        <a href="/SuperAdmin" class="admin-sidebar-brand">
+            <div class="icon"><img src="@Url.Content("~/img/LogoOperapp.jpeg")" alt="OperApp" style="border-radius:8px;" /></div>
             <div>
                 <div class="name" style="background:linear-gradient(135deg,#2563EB,#7C3AED,#EC4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:800;">OperApp</div>
-                <div class="sub">Panel administrador</div>
+                <div class="sub"><span class="sa-brand-badge">Super Admin</span></div>
             </div>
         </a>
 
         <div class="admin-nav-section">Principal</div>
-        <a href="/Admin" class="admin-nav-link @(ViewData["AdminSection"] as string == "dashboard" ? "active" : "")">
-            <i class="bi bi-speedometer2"></i> Dashboard
+        <a href="/SuperAdmin" class="admin-nav-link @(ViewData["SASection"] as string == "dashboard" ? "active" : "")">
+            <i class="bi bi-speedometer2"></i> Dashboard Global
         </a>
 
-        @if (!User.IsInRole("Mayordomo") || User.IsInRole("SuperAdmin"))
-        {
-        <div class="admin-nav-section">Configuración</div>
-        <a href="/Admin/Guardias" class="admin-nav-link @(ViewData["AdminSection"] as string == "guardias" ? "active" : "")">
-            <i class="bi bi-people-fill"></i> Guardias
+        <div class="admin-nav-section">Gestión Global</div>
+        <a href="/SuperAdmin/Empresas" class="admin-nav-link @(ViewData["SASection"] as string == "empresas" ? "active" : "")">
+            <i class="bi bi-building-gear"></i> Empresas
         </a>
-        <a href="/Admin/Edificios" class="admin-nav-link @(ViewData["AdminSection"] as string == "edificios" ? "active" : "")">
-            <i class="bi bi-building"></i> Edificios
-        </a>
-        <a href="/Admin/Areas" class="admin-nav-link @(ViewData["AdminSection"] as string == "areas" ? "active" : "")">
-            <i class="bi bi-map"></i> Áreas
-        </a>
-        <a href="/Admin/Usuarios" class="admin-nav-link @(ViewData["AdminSection"] as string == "usuarios" ? "active" : "")">
-            <i class="bi bi-person-lock"></i> Usuarios
-        </a>
-        }
-
-        <div class="admin-nav-section">Gestión</div>
-        <a href="/Admin/Tareas" class="admin-nav-link @(ViewData["AdminSection"] as string == "tareas" ? "active" : "")">
-            <i class="bi bi-list-task"></i> Tareas
-        </a>
-        <a href="/Admin/Rondas" class="admin-nav-link @(ViewData["AdminSection"] as string == "rondas" ? "active" : "")">
-            <i class="bi bi-clipboard2-check"></i> Rondas
-        </a>
-        <a href="/Admin/Incidencias" class="admin-nav-link @(ViewData["AdminSection"] as string == "incidencias" ? "active" : "")">
-            <i class="bi bi-exclamation-triangle-fill"></i> Incidencias
+        <a href="/SuperAdmin/SuperAdmins" class="admin-nav-link @(ViewData["SASection"] as string == "superadmins" ? "active" : "")">
+            <i class="bi bi-shield-fill-check"></i> Super Admins
         </a>
 
-        <div class="admin-nav-section">Sistema</div>
+        <div class="admin-nav-section">Acceso Rápido</div>
+        <a href="/Admin" class="admin-nav-link">
+            <i class="bi bi-grid-1x2"></i> Panel de empresa
+        </a>
         <a href="/Ronda/Historial" class="admin-nav-link">
             <i class="bi bi-phone"></i> Ver app guardia
         </a>
-        @if (User.IsInRole("SuperAdmin"))
-        {
-            <a href="/SuperAdmin" class="admin-nav-link" style="color:#7B1FA2;">
-                <i class="bi bi-shield-fill-check"></i> Panel Super Admin
-            </a>
-        }
     </aside>
 
-    <!-- Main content -->
     <main class="admin-main">
         <div class="admin-topbar">
             <div>
@@ -86,24 +63,12 @@
                     <div class="admin-page-sub">@ViewData["PageSub"]</div>
                 }
             </div>
-            @{
-                var rolBadge = User.FindFirstValue("Rol") ?? "";
-                var (badgeLabel, badgeBg, badgeColor, badgeIcon) = rolBadge switch {
-                    "SuperAdmin"       => ("Super Admin",          "#f3e5f5", "#7B1FA2", "bi-shield-fill-check"),
-                    "Admin"            => ("Administrador",        "#fff3e0", "#e8963a", "bi-person-badge"),
-                    "JefeOperaciones"  => ("Jefe de Operaciones",  "#e3f2fd", "#1565C0", "bi-person-lines-fill"),
-                    "Mayordomo"        => ("Mayordomo",            "#e8f5e9", "#2E7D32", "bi-person-gear"),
-                    "Conserje"         => ("Conserje",             "#eceff1", "#546E7A", "bi-person-workspace"),
-                    _                  => ("Guardia",              "#eef4ff", "#1565C0", "bi-shield-lock")
-                };
-            }
             <div style="display:flex;align-items:center;gap:8px;margin-right:8px;">
                 <div style="text-align:right;line-height:1.2;">
                     <div style="font-size:12px;font-weight:600;color:var(--text);">@User.Identity!.Name</div>
                     <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;
-                                 padding:2px 8px;border-radius:20px;
-                                 background:@badgeBg;color:@badgeColor;">
-                        <i class="bi @badgeIcon"></i> @badgeLabel
+                                 padding:2px 8px;border-radius:20px;background:#f3e5f5;color:#7B1FA2;">
+                        <i class="bi bi-shield-fill-check"></i> Super Admin
                     </span>
                 </div>
             </div>
@@ -139,8 +104,6 @@
         document.getElementById('adminSidebar').classList.remove('open');
         document.getElementById('sidebarOverlay').classList.remove('show');
     }
-
-    // SweetAlert2 confirm para formularios de eliminación
     function confirmarEliminar(formId, titulo, texto) {
         Swal.fire({
             title: titulo || '¿Eliminar?',
@@ -158,7 +121,6 @@
         });
         return false;
     }
-
     function initResponsiveTables() {
         document.querySelectorAll('.admin-table').forEach(function(table) {
             if (table.dataset.respInit) return;
@@ -182,21 +144,6 @@
                     cell.appendChild(lbl);
                     cell.appendChild(val);
                 });
-                var lastCell = cells[cells.length - 1];
-                if (cells.length >= 2 && lastCell && lastCell.querySelector('a, button')) {
-                    var btn = document.createElement('button');
-                    btn.className = 'card-actions-btn';
-                    btn.type = 'button';
-                    var icon = document.createElement('i');
-                    icon.className = 'bi bi-three-dots-vertical';
-                    btn.appendChild(icon);
-                    btn.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        row.classList.toggle('card-open');
-                        icon.className = row.classList.contains('card-open') ? 'bi bi-x' : 'bi bi-three-dots-vertical';
-                    });
-                    cells[0].appendChild(btn);
-                }
             });
         });
     }

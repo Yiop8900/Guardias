@@ -1,16 +1,24 @@
 @model Guardias.Models.UsuarioEdificio
+@using Guardias.Models
+@using System.Security.Claims
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Editar Usuario";
     ViewData["AdminSection"] = "usuarios";
     var edificios = ViewBag.EdificiosList as List<Guardias.Models.Edificio>;
+    var empresas = ViewBag.EmpresasList as List<Guardias.Models.EmpresaAdministradora>;
+    bool esSuperAdmin = User.IsInRole("SuperAdmin");
+    var rolReal = User.FindFirstValue("Rol");
+    bool puedeCrearAdmin = rolReal is "SuperAdmin" or "Admin";
+    var rolActual = (int)(Model.Rol ?? (Model.EsAdmin ? RolUsuario.Admin : RolUsuario.Guardia));
+    var rolesConEdificio = new[] { (int)RolUsuario.Mayordomo, (int)RolUsuario.Conserje, (int)RolUsuario.Guardia };
 }
 
 <div style="margin-bottom:16px;">
     <a href="/Admin/Usuarios" class="btn-admin btn-admin-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
 </div>
 
-<div class="admin-card" style="max-width:520px;">
+<div class="admin-card" style="max-width:560px;">
     <div style="font-weight:600;font-size:17px;margin-bottom:20px;display:flex;align-items:center;gap:8px;">
         <i class="bi bi-person-gear" style="color:var(--blue);"></i> Editar usuario
     </div>
@@ -33,18 +41,32 @@
         <input type="hidden" name="Id" value="@Model.Id" />
 
         <div class="form-admin-group">
-            <label class="form-admin-label">Tipo de usuario</label>
-            <div style="display:flex;gap:10px;">
-                <label class="tipo-pill" style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;border:1.5px solid var(--sep);border-radius:10px;cursor:pointer;">
-                    <input type="radio" name="EsAdmin" value="false" @(Model.EsAdmin ? "" : "checked") onchange="toggleTipo()" />
-                    <span><i class="bi bi-shield-lock me-1" style="color:var(--blue);"></i>Guardia de edificio</span>
-                </label>
-                <label class="tipo-pill" style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;border:1.5px solid var(--sep);border-radius:10px;cursor:pointer;">
-                    <input type="radio" name="EsAdmin" value="true" @(Model.EsAdmin ? "checked" : "") onchange="toggleTipo()" />
-                    <span><i class="bi bi-person-badge me-1" style="color:var(--orange);"></i>Administrador</span>
-                </label>
-            </div>
+            <label class="form-admin-label">Rol <span style="color:red;">*</span></label>
+            <select name="Rol" id="rol-select" class="form-admin-control" onchange="toggleCamposPorRol()" required>
+                @if (puedeCrearAdmin)
+                {
+                    <option value="@((int)RolUsuario.Admin)" selected="@(rolActual == (int)RolUsuario.Admin)">Administrador</option>
+                }
+                <option value="@((int)RolUsuario.JefeOperaciones)" selected="@(rolActual == (int)RolUsuario.JefeOperaciones)">Jefe de Operaciones</option>
+                <option value="@((int)RolUsuario.Mayordomo)" selected="@(rolActual == (int)RolUsuario.Mayordomo)">Mayordomo</option>
+                <option value="@((int)RolUsuario.Conserje)" selected="@(rolActual == (int)RolUsuario.Conserje)">Conserje</option>
+                <option value="@((int)RolUsuario.Guardia)" selected="@(rolActual == (int)RolUsuario.Guardia)">Guardia</option>
+            </select>
         </div>
+
+        @if (esSuperAdmin && empresas != null)
+        {
+            <div class="form-admin-group">
+                <label class="form-admin-label">Empresa</label>
+                <select name="EmpresaId" class="form-admin-control">
+                    <option value="">— Sin empresa —</option>
+                    @foreach (var emp in empresas)
+                    {
+                        <option value="@emp.Id" selected="@(emp.Id == Model.EmpresaId)">@emp.Nombre</option>
+                    }
+                </select>
+            </div>
+        }
 
         <div class="form-admin-group">
             <label class="form-admin-label">Nombre de usuario <span style="color:red;">*</span></label>
@@ -56,7 +78,7 @@
             <label class="form-admin-label">Nueva contraseña <span style="font-weight:400;color:var(--text2)">(dejar en blanco para mantener)</span></label>
             <input type="password" name="nuevaPassword" id="nuevaPassword" class="form-admin-control"
                    placeholder="Nueva contraseña..." autocomplete="new-password" minlength="4" />
-            @if (!string.IsNullOrEmpty(Model.PasswordPlain))
+            @if (!string.IsNullOrEmpty(Model.PasswordPlain) && puedeCrearAdmin)
             {
                 <div style="margin-top:8px;padding:10px 12px;background:#f0f4ff;border-radius:8px;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
                     <span style="color:var(--text2);">Contraseña actual:</span>
@@ -74,15 +96,15 @@
 
         <div class="form-admin-group" id="edificio-group">
             <label class="form-admin-label">Edificio <span style="color:red;" class="edificio-req">*</span></label>
-            <select name="EdificioId" id="edificio-select" class="form-admin-control" required>
+            <select name="EdificioId" id="edificio-select" class="form-admin-control">
                 <option value="">— Selecciona edificio —</option>
-                @foreach (var e in edificios!)
+                @foreach (var e in edificios ?? new())
                 {
                     <option value="@e.Id" selected="@(e.Id == Model.EdificioId)">@e.Nombre</option>
                 }
             </select>
-            <div style="font-size:12px;color:var(--text2);margin-top:6px;" id="admin-hint">
-                Los administradores no se asocian a un edificio.
+            <div style="font-size:12px;color:var(--text2);margin-top:6px;display:none;" id="no-edificio-hint">
+                Este rol no se asocia a un edificio específico.
             </div>
         </div>
 
@@ -103,6 +125,27 @@
 
 @section Scripts {
 <script>
+    var rolesConEdificio = [@string.Join(",", rolesConEdificio)];
+
+    function toggleCamposPorRol() {
+        var rol = parseInt(document.getElementById('rol-select').value);
+        var edificioSelect = document.getElementById('edificio-select');
+        var hint = document.getElementById('no-edificio-hint');
+        var req = document.querySelector('.edificio-req');
+        if (rolesConEdificio.includes(rol)) {
+            edificioSelect.required = true;
+            edificioSelect.style.display = 'block';
+            hint.style.display = 'none';
+            if (req) req.style.display = 'inline';
+        } else {
+            edificioSelect.required = false;
+            edificioSelect.value = '';
+            edificioSelect.style.display = 'none';
+            hint.style.display = 'block';
+            if (req) req.style.display = 'none';
+        }
+    }
+
     function togglePass() {
         var v = document.getElementById('passValue');
         var h = document.getElementById('passHidden');
@@ -113,23 +156,6 @@
         icon.className = visible ? 'bi bi-eye' : 'bi bi-eye-slash';
     }
 
-    function toggleTipo() {
-        var esAdmin = document.querySelector('input[name="EsAdmin"]:checked').value === 'true';
-        var select = document.getElementById('edificio-select');
-        var hint = document.getElementById('admin-hint');
-        var req = document.querySelector('.edificio-req');
-        if (esAdmin) {
-            select.required = false;
-            select.style.display = 'none';
-            req.style.display = 'none';
-            hint.style.display = 'block';
-        } else {
-            select.required = true;
-            select.style.display = 'block';
-            req.style.display = 'inline';
-            hint.style.display = 'none';
-        }
-    }
-    toggleTipo();
+    toggleCamposPorRol();
 </script>
 }

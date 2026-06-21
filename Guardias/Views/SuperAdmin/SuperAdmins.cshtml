@@ -1,0 +1,67 @@
+@model List<Guardias.Models.UsuarioEdificio>
+@{
+    Layout = "_SuperAdminLayout";
+    ViewData["Title"] = "Super Administradores";
+    ViewData["SASection"] = "superadmins";
+    ViewData["PageSub"] = "Gestiona las cuentas con acceso total al sistema";
+}
+
+<div class="admin-toolbar">
+    <div style="flex:1;"></div>
+    <a href="/SuperAdmin/CrearSuperAdmin" class="btn-admin btn-admin-primary">
+        <i class="bi bi-shield-plus"></i> Nuevo Super Admin
+    </a>
+</div>
+
+<div class="admin-card" style="padding:0;overflow:hidden;">
+    @if (!Model.Any())
+    {
+        <div style="padding:40px;text-align:center;color:var(--text2);">
+            <i class="bi bi-shield-fill-check" style="font-size:40px;display:block;margin-bottom:10px;"></i>
+            No hay super administradores registrados.
+        </div>
+    }
+    else
+    {
+        <div class="table-scroll-wrap">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in Model)
+                {
+                    <tr>
+                        <td style="font-weight:500;">
+                            <i class="bi bi-shield-fill-check me-2" style="color:#7B1FA2;"></i>@u.NombreUsuario
+                        </td>
+                        <td>
+                            @if (u.Activo)
+                            {
+                                <span class="badge-ios badge-done">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="badge-ios" style="background:#f5f5f5;color:var(--text2);">Inactivo</span>
+                            }
+                        </td>
+                        <td>
+                            <form id="del-sa-@u.Id" method="post" asp-controller="SuperAdmin" asp-action="EliminarSuperAdmin" asp-route-id="@u.Id" style="display:inline;">
+                                @Html.AntiForgeryToken()
+                                <button type="button" class="btn-admin btn-admin-danger" style="padding:6px 12px;font-size:13px;"
+                                        onclick="confirmarEliminar('del-sa-@u.Id','¿Eliminar Super Admin?','Se eliminará el usuario @u.NombreUsuario de forma permanente.')">
+                                    <i class="bi bi-trash"></i> Eliminar
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    }
+</div>

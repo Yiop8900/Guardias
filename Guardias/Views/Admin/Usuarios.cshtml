@@ -1,9 +1,13 @@
 @model List<Guardias.Models.UsuarioEdificio>
+@using Guardias.Models
+@using System.Security.Claims
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Usuarios de Edificio";
+    ViewData["Title"] = "Usuarios";
     ViewData["AdminSection"] = "usuarios";
-    ViewData["PageSub"] = "Gestiona los accesos de guardias y administradores";
+    ViewData["PageSub"] = "Gestiona los accesos por rol y empresa";
+    var rolReal = User.FindFirstValue("Rol");
+    bool puedeVerContraseñas = rolReal is "SuperAdmin" or "Admin";
 }
 
 <div class="admin-toolbar">
@@ -28,15 +32,19 @@
             <thead>
                 <tr>
                     <th>Usuario</th>
-                    <th>Tipo</th>
+                    <th>Rol</th>
+                    <th>Empresa</th>
                     <th>Edificio</th>
-                    <th>
-                        Contraseña
-                        <button type="button" onclick="toggleHashes()" id="btnToggleHash"
-                                style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--blue);margin-left:6px;">
-                            <i class="bi bi-eye" id="hashEyeIcon"></i> mostrar
-                        </button>
-                    </th>
+                    @if (puedeVerContraseñas)
+                    {
+                        <th>
+                            Contraseña
+                            <button type="button" onclick="toggleHashes()" id="btnToggleHash"
+                                    style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--blue);margin-left:6px;">
+                                <i class="bi bi-eye" id="hashEyeIcon"></i> mostrar
+                            </button>
+                        </th>
+                    }
                     <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
@@ -44,27 +52,35 @@
             <tbody>
                 @foreach (var u in Model)
                 {
+                    var rol = u.RolEfectivo;
+                    var (rolColor, rolBg, rolIcon) = rol switch {
+                        RolUsuario.SuperAdmin => ("#7B1FA2", "#f3e5f5", "bi-shield-fill-check"),
+                        RolUsuario.Admin => ("#e8963a", "#fff3e0", "bi-person-badge"),
+                        RolUsuario.JefeOperaciones => ("#1565C0", "#e3f2fd", "bi-person-lines-fill"),
+                        RolUsuario.Mayordomo => ("#2E7D32", "#e8f5e9", "bi-person-gear"),
+                        RolUsuario.Conserje => ("#546E7A", "#eceff1", "bi-person-workspace"),
+                        _ => ("#1565C0", "#eef4ff", "bi-shield-lock")
+                    };
                     <tr>
                         <td style="font-weight:500;">
                             <i class="bi bi-person me-2" style="color:var(--blue);"></i>@u.NombreUsuario
                         </td>
                         <td>
-                            @if (u.EsAdmin)
-                            {
-                                <span class="badge-ios" style="background:#fff3e0;color:#e8963a;"><i class="bi bi-person-badge me-1"></i>Administrador</span>
-                            }
-                            else
-                            {
-                                <span class="badge-ios" style="background:#eef4ff;color:var(--blue);"><i class="bi bi-shield-lock me-1"></i>Guardia</span>
-                            }
-                        </td>
-                        <td>@(u.EsAdmin ? "—" : (u.Edificio?.Nombre ?? "—"))</td>
-                        <td>
-                            <span class="hash-cell" style="font-family:monospace;font-weight:600;color:var(--text);display:none;">
-                                @(u.PasswordPlain ?? "—")
+                            <span class="badge-ios" style="background:@rolBg;color:@rolColor;">
+                                <i class="bi @rolIcon me-1"></i>@rol.Nombre()
                             </span>
-                            <span class="hash-hidden" style="color:var(--text2);letter-spacing:2px;">••••••••</span>
                         </td>
+                        <td>@(u.Empresa?.Nombre ?? "—")</td>
+                        <td>@(u.Edificio?.Nombre ?? "—")</td>
+                        @if (puedeVerContraseñas)
+                        {
+                            <td>
+                                <span class="hash-cell" style="font-family:monospace;font-weight:600;color:var(--text);display:none;">
+                                    @(u.PasswordPlain ?? "—")
+                                </span>
+                                <span class="hash-hidden" style="color:var(--text2);letter-spacing:2px;">••••••••</span>
+                            </td>
+                        }
                         <td>
                             @if (u.Activo)
                             {
