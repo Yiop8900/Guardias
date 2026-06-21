@@ -1,114 +1,191 @@
-@model List<Guardias.Models.Tarea>
 @{
     ViewData["ActiveTab"] = "tareas";
-    int pendientes = ViewBag.TotalPendientes;
-    int total = Model.Count;
-    int completadas = Model.Count(t => t.CompletadaHoy);
+    Layout = "_MobileLayout";
 }
 
-<div class="page-header">
-    <h2>Tareas de hoy</h2>
-    <p>@completadas de @total completadas</p>
-</div>
+<!-- Encabezado -->
+    <div id="tareas-header" style="margin-bottom:14px;">
+        <div style="font-size:20px;font-weight:700;color:var(--text);">Tareas de hoy</div>
+        <div id="tareas-sub" style="font-size:13px;color:var(--text2);margin-top:2px;">Cargando...</div>
+    </div>
 
-@if (pendientes > 0)
-{
-    <div style="background:#FFF8E1;border-radius:12px;padding:12px 16px;font-size:14px;color:#E65100;
-                display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-        <i class="bi bi-exclamation-circle-fill"></i> @pendientes tarea(s) pendiente(s) hoy
+    <!-- Banner de alerta -->
+    <div id="alerta-pendientes" style="display:none;background:#FFF8E1;border-radius:12px;
+         padding:12px 16px;font-size:14px;color:#E65100;display:none;
+         align-items:center;gap:8px;margin-bottom:14px;">
+        <i class="bi bi-exclamation-circle-fill"></i>
+        <span id="alerta-texto"></span>
     </div>
-}
-else if (total > 0)
-{
-    <div style="background:#E8F5E9;border-radius:12px;padding:12px 16px;font-size:14px;color:#2E7D32;
-                display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-        <i class="bi bi-check-circle-fill"></i> ¡Todas las tareas de hoy completadas!
+
+    <!-- Lista de tareas -->
+    <div id="tareas-lista"></div>
+
+    <!-- Sin tareas -->
+    <div id="tareas-empty" style="display:none;text-align:center;padding:48px 24px;">
+        <i class="bi bi-check2-square" style="font-size:48px;color:var(--sep);display:block;margin-bottom:12px;"></i>
+        <div style="font-weight:600;color:var(--text);">Sin tareas asignadas</div>
     </div>
+
+    <!-- Skeleton loading -->
+    <div id="tareas-skeleton">
+        @for (int i = 0; i < 3; i++)
+        {
+            <div style="background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+                <div style="height:16px;background:#f0f0f0;border-radius:8px;width:70%;margin-bottom:10px;"></div>
+                <div style="height:12px;background:#f0f0f0;border-radius:8px;width:50%;margin-bottom:16px;"></div>
+                <div style="height:38px;background:#f0f0f0;border-radius:12px;"></div>
+            </div>
+        }
+    </div>
+
+<script>
+var TURNOS = ['Todos los turnos','Mañana','Tarde','Noche'];
+
+function turnoNombre(t) { return TURNOS[t] || 'Todos'; }
+
+function horaStr(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
 }
 
-@if (!Model.Any())
-{
-    <div class="empty-state">
-        <div class="empty-icon"><i class="bi bi-check2-square"></i></div>
-        <h3>Sin tareas</h3>
-        <p>No tienes tareas asignadas.</p>
-    </div>
+function esHoy(fechaStr) {
+    if (!fechaStr) return false;
+    var hoy = new Date().toDateString();
+    return new Date(fechaStr).toDateString() === hoy;
 }
-else
-{
-    foreach (var tarea in Model)
-    {
-        var cardStyle = tarea.CompletadaHoy ? "opacity:0.65;" : "";
-        <div class="task-card" style="@cardStyle">
-            <div class="task-card-top">
-                <div style="flex:1;min-width:0;">
-                    <div class="task-title" style="@(tarea.CompletadaHoy ? "text-decoration:line-through;color:var(--text2);" : "")">
-                        @tarea.Titulo
-                    </div>
-                    @if (!string.IsNullOrWhiteSpace(tarea.Descripcion))
-                    {
-                        <div class="task-desc">@tarea.Descripcion</div>
-                    }
-                </div>
-                @if (tarea.CompletadaHoy)
-                {
-                    <span class="badge-ios badge-done" style="flex-shrink:0;">✓ Hoy</span>
-                }
-                else
-                {
-                    <span class="badge-ios badge-open" style="flex-shrink:0;">Pendiente</span>
-                }
-            </div>
-            <div class="task-meta">
-                @if (tarea.HoraProgramada.HasValue)
-                {
-                    <span><i class="bi bi-clock me-1"></i>@tarea.HoraProgramada.Value.ToString("HH:mm")</span>
-                }
-                <span><i class="bi bi-sun me-1"></i>
-                    @(tarea.Turno == Guardias.Models.Turno.Manana ? "Mañana" :
-                      tarea.Turno == Guardias.Models.Turno.Tarde ? "Tarde" :
-                      tarea.Turno == Guardias.Models.Turno.Noche ? "Noche" : "Todos los turnos")
-                </span>
-                @if (tarea.CompletadaHoy && tarea.FechaCompletada.HasValue)
-                {
-                    <span style="color:var(--green);"><i class="bi bi-check2 me-1"></i>@tarea.FechaCompletada.Value.ToString("HH:mm")</span>
-                }
-            </div>
-            <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-                <a href="/Tarea/Detalle/@tarea.Id"
-                   style="flex:1;text-align:center;padding:9px 14px;font-size:13px;text-decoration:none;
-                          border-radius:12px;font-weight:600;
-                          background:@(tarea.CompletadaHoy ? "#F1F5F9" : "var(--gradient)");
-                          color:@(tarea.CompletadaHoy ? "var(--text2)" : "#fff");">
-                    <i class="bi bi-folder2-open"></i> Abrir
-                    @if (tarea.Archivos.Any())
-                    {
-                        <span style="background:rgba(0,0,0,0.15);border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px;">@tarea.Archivos.Count</span>
-                    }
-                </a>
-                @if (!tarea.CompletadaHoy)
-                {
-                    if (tarea.Archivos.Any())
-                    {
-                        <form method="post" asp-controller="Tarea" asp-action="Completar" asp-route-id="@tarea.Id">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" title="Marcar completada"
-                                    style="background:#E8F5E9;border:none;border-radius:12px;padding:9px 16px;
-                                           font-size:16px;color:#2E7D32;cursor:pointer;">
-                                <i class="bi bi-check2"></i>
-                            </button>
-                        </form>
-                    }
-                    else
-                    {
-                        <a href="/Tarea/Detalle/@tarea.Id" title="Adjunta un archivo antes de completar"
-                           style="background:#FEE2E2;border:none;border-radius:12px;padding:9px 16px;
-                                  font-size:16px;color:#DC2626;cursor:pointer;display:flex;align-items:center;text-decoration:none;">
-                            <i class="bi bi-paperclip"></i>
-                        </a>
-                    }
-                }
-            </div>
-        </div>
+
+function renderTarea(t) {
+    var completada = esHoy(t.fechaCompletada);
+    var tieneArchivos = t.archivosCount > 0;
+    var style = completada ? 'opacity:0.65;' : '';
+
+    var titleStyle = completada ? 'text-decoration:line-through;color:var(--text2);' : '';
+    var badge = completada
+        ? '<span class="badge-ios badge-done" style="flex-shrink:0;">✓ Hoy</span>'
+        : '<span class="badge-ios badge-open" style="flex-shrink:0;">Pendiente</span>';
+
+    var hora = t.horaProgramada
+        ? '<span><i class="bi bi-clock me-1"></i>' + t.horaProgramada + '</span>' : '';
+    var horaComp = (completada && t.fechaCompletada)
+        ? '<span style="color:var(--green);"><i class="bi bi-check2 me-1"></i>' + horaStr(t.fechaCompletada) + '</span>' : '';
+
+    var abrirBg = completada
+        ? 'background:#F1F5F9;color:var(--text2);'
+        : 'background:linear-gradient(135deg,#2563EB,#7C3AED);color:#fff;';
+    var archivoBadge = t.archivosCount > 0
+        ? '<span style="background:rgba(0,0,0,0.15);border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px;">' + t.archivosCount + '</span>' : '';
+
+    var actionBtn = '';
+    if (!completada) {
+        if (tieneArchivos) {
+            actionBtn = '<button type="button" onclick="completarTarea('+t.id+',this)" '
+                + 'style="background:#E8F5E9;border:none;border-radius:12px;padding:9px 16px;font-size:16px;color:#2E7D32;cursor:pointer;">'
+                + '<i class="bi bi-check2"></i></button>';
+        } else {
+            actionBtn = '<a href="/Tarea/Detalle/'+t.id+'" title="Adjunta un archivo primero" '
+                + 'style="background:#FEE2E2;border-radius:12px;padding:9px 16px;font-size:16px;color:#DC2626;display:flex;align-items:center;text-decoration:none;">'
+                + '<i class="bi bi-paperclip"></i></a>';
+        }
+    }
+
+    return '<div class="task-card" data-tarea-id="'+t.id+'" style="'+style+'">'
+        + '<div class="task-card-top">'
+        +   '<div style="flex:1;min-width:0;">'
+        +     '<div class="task-title" style="'+titleStyle+'">' + escHtml(t.titulo) + '</div>'
+        +     (t.descripcion ? '<div class="task-desc">' + escHtml(t.descripcion) + '</div>' : '')
+        +   '</div>'
+        +   badge
+        + '</div>'
+        + '<div class="task-meta">' + hora + '<span><i class="bi bi-sun me-1"></i>' + turnoNombre(t.turno) + '</span>' + horaComp + '</div>'
+        + '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">'
+        +   '<a href="/Tarea/Detalle/'+t.id+'" style="flex:1;text-align:center;padding:9px 14px;font-size:13px;text-decoration:none;border-radius:12px;font-weight:600;' + abrirBg + '">'
+        +     '<i class="bi bi-folder2-open"></i> Abrir' + archivoBadge
+        +   '</a>'
+        +   actionBtn
+        + '</div>'
+        + '</div>';
+}
+
+function escHtml(s) {
+    return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function completarTarea(id, btn) {
+    if (!navigator.onLine) {
+        await window.OperApp.completarOffline(id, null);
+        var card = document.querySelector('[data-tarea-id="'+id+'"]');
+        if (card) {
+            card.style.opacity = '0.65';
+            var title = card.querySelector('.task-title');
+            if (title) title.style.textDecoration = 'line-through';
+            var badge = card.querySelector('.badge-ios');
+            if (badge) { badge.className = 'badge-ios badge-done'; badge.textContent = '✓ Hoy'; }
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-clock"></i>'; btn.style.color = '#92400E'; btn.style.background = '#FEF3C7'; }
+        }
+        return;
+    }
+    // Online: POST normal
+    var form = document.createElement('form');
+    form.method = 'post';
+    form.action = '/Tarea/Completar/' + id;
+    var tok = document.querySelector('input[name="__RequestVerificationToken"]');
+    if (tok) {
+        var h = document.createElement('input');
+        h.type = 'hidden'; h.name = '__RequestVerificationToken'; h.value = tok.value;
+        form.appendChild(h);
+    }
+    document.body.appendChild(form);
+    form.submit();
+}
+
+async function cargarTareas() {
+    try {
+        var res = await fetch('/api/mobile/tareas', { credentials: 'include' });
+        var data = await res.json();
+        renderLista(data.tareas || []);
+    } catch(e) {
+        // Intentar desde caché (SW ya lo hizo, pero por si acaso)
+        document.getElementById('tareas-skeleton').style.display = 'none';
+        document.getElementById('tareas-sub').textContent = 'Sin conexión — mostrando datos guardados';
+        // La respuesta cacheada del SW debería haberla servido igual — si llegamos aquí es error total
+        document.getElementById('tareas-lista').innerHTML =
+            '<div style="text-align:center;padding:32px;color:var(--text2);">'
+            + '<i class="bi bi-wifi-off" style="font-size:40px;display:block;margin-bottom:12px;"></i>'
+            + 'No hay datos guardados aún. Conecta a internet una vez para habilitar el modo offline.</div>';
     }
 }
+
+function renderLista(tareas) {
+    document.getElementById('tareas-skeleton').style.display = 'none';
+    var lista = document.getElementById('tareas-lista');
+    var pendientes = tareas.filter(function(t) { return !esHoy(t.fechaCompletada); }).length;
+    var total = tareas.length;
+
+    document.getElementById('tareas-sub').textContent =
+        (tareas.filter(function(t){ return esHoy(t.fechaCompletada); }).length) + ' de ' + total + ' completadas';
+
+    if (pendientes > 0) {
+        var alertEl = document.getElementById('alerta-pendientes');
+        document.getElementById('alerta-texto').textContent = pendientes + ' tarea(s) pendiente(s) hoy';
+        alertEl.style.display = 'flex';
+    } else if (total > 0) {
+        var alertEl = document.getElementById('alerta-pendientes');
+        alertEl.style.background = '#E8F5E9';
+        alertEl.style.color = '#2E7D32';
+        document.getElementById('alerta-texto').innerHTML = '¡Todas las tareas de hoy completadas!';
+        alertEl.style.display = 'flex';
+    }
+
+    if (total === 0) {
+        document.getElementById('tareas-empty').style.display = 'block';
+    } else {
+        lista.innerHTML = tareas.map(renderTarea).join('');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', cargarTareas);
+</script>
+
+@* Token antiforgery oculto para submits offline→online *@
+<form style="display:none;">@Html.AntiForgeryToken()</form>

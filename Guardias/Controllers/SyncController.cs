@@ -100,6 +100,69 @@ public class SyncController : Controller
         return Ok(new { ok = true });
     }
 
+    // POST /Sync/CheckArea — sincroniza un área completada offline
+    [HttpPost("CheckArea")]
+    public async Task<IActionResult> CheckArea([FromForm] SyncCheckAreaRequest req, List<IFormFile>? fotos)
+    {
+        var edificioId = GetEdificioId();
+        var ronda = await _context.Rondas
+            .Include(r => r.AreaRondas)
+            .FirstOrDefaultAsync(r => r.Id == req.RondaId && r.EdificioId == edificioId);
+
+        if (ronda == null) return NotFound();
+
+        var areaRonda = ronda.AreaRondas.FirstOrDefault(ar => ar.Id == req.AreaRondaId);
+        if (areaRonda == null) return NotFound();
+
+        if (areaRonda.Completada) return Ok(new { ok = true, already = true });
+
+        areaRonda.Completada = true;
+        areaRonda.Notas = req.Notas;
+        areaRonda.FechaCompletada = DateTime.Now;
+
+        // Guardar fotos
+        if (fotos != null && fotos.Any())
+        {
+            var uploadsDir = Path.Combine(_env.WebRootPath, "uploads", "fotos");
+            Directory.CreateDirectory(uploadsDir);
+            var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+
+            foreach (var foto in fotos.Where(f => f.Length > 0))
+            {
+                var ext = Path.GetExtension(foto.FileName).ToLowerInvariant();
+                if (!allowed.Contains(ext)) continue;
+                var fileName = Guid.NewGuid().ToString("N") + ext;
+                var path = Path.Combine(uploadsDir, fileName);
+                await using var stream = new FileStream(path, FileMode.Create);
+                await foto.CopyToAsync(stream);
+                _context.FotosRonda.Add(new FotoRonda
+                {
+                    AreaRondaId = req.AreaRondaId,
+                    RutaFoto = $"/uploads/fotos/{fileName}",
+                    FechaCaptura = DateTime.Now
+                });
+            }
+        }
+
+        // Incidencia opcional
+        if (!string.IsNullOrWhiteSpace(req.IncDescripcion))
+        {
+            _context.Incidencias.Add(new Incidencia
+            {
+                RondaId = req.RondaId,
+                AreaRondaId = req.AreaRondaId,
+                Descripcion = req.IncDescripcion,
+                Severidad = req.IncSeveridad,
+                Estado = EstadoIncidencia.Abierta,
+                FechaCreacion = DateTime.Now
+            });
+        }
+
+        await _context.SaveChangesAsync();
+        return Ok(new { ok = true });
+    }
+
     // GET /Sync/Token — devuelve el antiforgery token para usar en JS
     [HttpGet("Token")]
     public IActionResult Token()
@@ -122,4 +185,13 @@ public class SyncCompletarRequest
 {
     public int TareaId { get; set; }
     public DateTime? Fecha { get; set; }
+}
+
+public class SyncCheckAreaRequest
+{
+    public int RondaId { get; set; }
+    public int AreaRondaId { get; set; }
+    public string? Notas { get; set; }
+    public string? IncDescripcion { get; set; }
+    public SeveridadIncidencia IncSeveridad { get; set; } = SeveridadIncidencia.Leve;
 }

@@ -201,6 +201,37 @@
         return true;
     }
 
+    // Interceptar submit offline
+    document.getElementById('area-form').addEventListener('submit', async function(e) {
+        if (!navigator.onLine) {
+            e.preventDefault();
+            if (selectedFiles.length === 0) {
+                alert('Debes agregar al menos una foto antes de guardar.');
+                return;
+            }
+            var notas = document.getElementById('notas').value;
+            var incDesc = document.getElementById('incDescripcion').value;
+            var incSev = document.querySelector('.sev-radio:checked')?.value || 0;
+            var rondaId = @rondaId;
+            var areaRondaId = @areaRondaId;
+
+            if (window.OperApp) {
+                await window.OperApp.checkAreaOffline(rondaId, areaRondaId, selectedFiles, notas, incDesc, incSev);
+            }
+
+            // Feedback visual y redirigir a selección de áreas
+            var btn = document.getElementById('btn-siguiente');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-check2"></i> Guardado (offline)';
+            btn.style.background = '#FEF3C7';
+            btn.style.color = '#92400E';
+
+            setTimeout(function() {
+                window.location.href = '/Ronda/SeleccionArea?rondaId=' + rondaId;
+            }, 800);
+        }
+    });
+
     // Incident toggle
     let incOpen = false;
     function toggleInc() {

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>OperApp</title>
+  <link rel="icon" type="image/png" href="/img/LogoOperapp.png" />
+  <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="/css/mobile.css" />
+  <style>
+    /* Iconos críticos inline — sin CDN */
+    .bi::before { display:inline-block; font-family:"bootstrap-icons"; font-style:normal; }
+  </style>
+  <!-- Bootstrap Icons — cacheado por SW si ya se cargó online -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        onerror="document.querySelectorAll('.bi').forEach(function(e){e.style.display='none'})" />
+</head>
+<body class="mobile-body">
+
+  <!-- Offline banner siempre visible -->
+  <div id="offline-banner" style="position:fixed;top:0;left:0;right:0;z-index:9999;
+       background:#0F172A;color:#fff;padding:6px 16px;font-size:12px;font-weight:500;
+       display:flex;align-items:center;gap:6px;justify-content:space-between;">
+    <span><i class="bi bi-wifi-off"></i> Sin conexión — datos guardados localmente</span>
+    <span id="pending-chip" style="display:none;background:#EF4444;border-radius:10px;padding:1px 7px;font-size:11px;"></span>
+  </div>
+
+  <header class="app-header" style="margin-top:30px;">
+    <div class="app-header-icon" style="background:transparent;padding:0;">
+      <img src="/img/LogoOperapp.jpeg" alt="OperApp"
+           style="width:44px;height:44px;object-fit:contain;border-radius:10px;"
+           onerror="this.style.display='none'" />
+    </div>
+    <div class="app-header-text">
+      <div class="app-title" style="background:var(--gradient);-webkit-background-clip:text;
+           -webkit-text-fill-color:transparent;background-clip:text;">OperApp</div>
+      <div class="app-subtitle" id="edificio-nombre">Modo offline</div>
+    </div>
+  </header>
+
+  <main class="app-content" id="app-main" style="margin-top:30px;">
+    <div id="loading-indicator" style="text-align:center;padding:60px 24px;">
+      <div style="width:36px;height:36px;border:3px solid var(--sep);border-top-color:var(--blue);
+           border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px;"></div>
+      <div style="color:var(--text2);font-size:14px;">Cargando datos guardados...</div>
+    </div>
+  </main>
+
+  <nav class="bottom-nav">
+    <a href="/Ronda/Historial" class="bottom-nav-item" id="nav-historial">
+      <i class="bi bi-clipboard2-check"></i><span>Historial</span>
+    </a>
+    <a href="/Ronda/Nueva" class="bottom-nav-item" id="nav-nueva">
+      <i class="bi bi-plus-circle"></i><span>Nueva Ronda</span>
+    </a>
+    <a href="/Incidencia" class="bottom-nav-item" id="nav-incidencias">
+      <i class="bi bi-exclamation-triangle"></i><span>Incidencias</span>
+    </a>
+    <a href="/Pendientes" class="bottom-nav-item" id="nav-pendientes">
+      <i class="bi bi-pencil-square"></i><span>Pendientes</span>
+    </a>
+    <a href="/Tarea" class="bottom-nav-item" id="nav-tareas">
+      <i class="bi bi-check2-square"></i><span>Tareas</span>
+    </a>
+  </nav>
+
+  <script src="/lib/jquery/dist/jquery.min.js"></script>
+  <script src="/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/offline.js"></script>
+
+  <script>
+  // ── Utilidades ────────────────────────────────────────────────────────────
+  var TURNOS = ['Todos','Mañana','Tarde','Noche'];
+
+  function esc(s) {
+    return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function esHoy(f) {
+    if (!f) return false;
+    return new Date(f).toDateString() === new Date().toDateString();
+  }
+
+  function horaStr(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+  }
+
+  function main(html) {
+    document.getElementById('loading-indicator').style.display = 'none';
+    document.getElementById('app-main').insertAdjacentHTML('beforeend', html);
+  }
+
+  function showNoData(msg) {
+    main('<div style="text-align:center;padding:48px 24px;">'
+      + '<i class="bi bi-cloud-slash" style="font-size:48px;color:var(--sep);display:block;margin-bottom:16px;"></i>'
+      + '<div style="font-weight:600;color:var(--text);margin-bottom:8px;">'+esc(msg||'No disponible offline')+'</div>'
+      + '<div style="font-size:13px;color:var(--text2);">Conecta a internet y abre esta sección para guardarla.</div>'
+      + '</div>');
+  }
+
+  // ── Routing ───────────────────────────────────────────────────────────────
+  var path = location.pathname.replace(/\/$/, '') || '/';
+
+  // Activar nav item
+  var navMap = {
+    '/Tarea': 'nav-tareas', '/Ronda/Historial': 'nav-historial',
+    '/Ronda/Nueva': 'nav-nueva', '/Incidencia': 'nav-incidencias',
+    '/Pendientes': 'nav-pendientes'
+  };
+  var activeNav = navMap[path] || (path.startsWith('/Tarea/') ? 'nav-tareas' : null);
+  if (activeNav) document.getElementById(activeNav).classList.add('active');
+
+  // ── Vistas ────────────────────────────────────────────────────────────────
+  async function routeAndRender() {
+    // Actualizar pending count
+    if (window.OperApp) {
+      var cnt = await window.OperApp.getPendingCount();
+      if (cnt > 0) {
+        document.getElementById('pending-chip').style.display = 'inline';
+        document.getElementById('pending-chip').textContent = cnt + ' pendiente(s)';
+      }
+    }
+
+    if (path === '/Tarea' || path === '/Tarea/Index') {
+      await viewTareas();
+    } else if (path.startsWith('/Tarea/Detalle/')) {
+      var id = parseInt(path.split('/').pop());
+      await viewDetalleTarea(id);
+    } else if (path === '/Ronda/Historial') {
+      await viewHistorial();
+    } else {
+      await viewGenerico();
+    }
+  }
+
+  // ── Vista Tareas ──────────────────────────────────────────────────────────
+  async function viewTareas() {
+    try {
+      var res = await fetch('/api/mobile/tareas', { credentials: 'include' });
+      if (!res.ok) throw new Error('no data');
+      var data = await res.json();
+      renderTareas(data.tareas || []);
+    } catch {
+      showNoData('Sin datos de tareas guardados');
+    }
+  }
+
+  function renderTareas(tareas) {
+    var hoy = tareas.filter(function(t){ return esHoy(t.fechaCompletada); }).length;
+    var html = '<div style="margin-bottom:14px;">'
+      + '<div style="font-size:20px;font-weight:700;color:var(--text);">Tareas de hoy</div>'
+      + '<div style="font-size:13px;color:var(--text2);margin-top:2px;">'+hoy+' de '+tareas.length+' completadas</div>'
+      + '</div>';
+
+    if (tareas.length === 0) {
+      html += '<div style="text-align:center;padding:48px;color:var(--text2);">Sin tareas asignadas</div>';
+    } else {
+      tareas.forEach(function(t) {
+        var ok = esHoy(t.fechaCompletada);
+        var badge = ok
+          ? '<span class="badge-ios badge-done" style="flex-shrink:0;">&#x2713; Hoy</span>'
+          : '<span class="badge-ios badge-open" style="flex-shrink:0;">Pendiente</span>';
+        var hora = t.horaProgramada
+          ? '<span><i class="bi bi-clock me-1"></i>'+t.horaProgramada+'</span>' : '';
+        var horaOk = (ok && t.fechaCompletada)
+          ? '<span style="color:var(--green);"><i class="bi bi-check2 me-1"></i>'+horaStr(t.fechaCompletada)+'</span>' : '';
+
+        var abrirBg = ok ? 'background:#F1F5F9;color:var(--text2);' : 'background:linear-gradient(135deg,#2563EB,#7C3AED);color:#fff;';
+        var archBadge = t.archivosCount > 0
+          ? '<span style="background:rgba(0,0,0,.15);border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px;">'+t.archivosCount+'</span>' : '';
+
+        var actionBtn = '';
+        if (!ok) {
+          if (t.archivosCount > 0) {
+            actionBtn = '<button type="button" onclick="completarTareaOffline('+t.id+',this)"'
+              + ' style="background:#E8F5E9;border:none;border-radius:12px;padding:9px 16px;font-size:16px;color:#2E7D32;cursor:pointer;">'
+              + '<i class="bi bi-check2"></i></button>';
+          } else {
+            actionBtn = '<a href="/Tarea/Detalle/'+t.id+'"'
+              + ' style="background:#FEE2E2;border-radius:12px;padding:9px 16px;font-size:16px;color:#DC2626;display:flex;align-items:center;text-decoration:none;">'
+              + '<i class="bi bi-paperclip"></i></a>';
+          }
+        }
+
+        html += '<div class="task-card" data-tarea-id="'+t.id+'" style="'+(ok?'opacity:.65;':'')+'">'
+          + '<div class="task-card-top">'
+          +   '<div style="flex:1;min-width:0;">'
+          +     '<div class="task-title" style="'+(ok?'text-decoration:line-through;color:var(--text2);':'')+'">'
+          +       esc(t.titulo)+'</div>'
+          +     (t.descripcion?'<div class="task-desc">'+esc(t.descripcion)+'</div>':'')
+          +   '</div>'+badge
+          + '</div>'
+          + '<div class="task-meta">'+hora
+          +   '<span><i class="bi bi-sun me-1"></i>'+(TURNOS[t.turno]||'Todos')+'</span>'+horaOk
+          + '</div>'
+          + '<div style="margin-top:12px;display:flex;gap:8px;">'
+          +   '<a href="/Tarea/Detalle/'+t.id+'" style="flex:1;text-align:center;padding:9px 14px;font-size:13px;text-decoration:none;border-radius:12px;font-weight:600;'+abrirBg+'">'
+          +     '<i class="bi bi-folder2-open"></i> Abrir'+archBadge+'</a>'
+          +   actionBtn
+          + '</div>'
+          + '</div>';
+      });
+    }
+    main(html);
+  }
+
+  async function completarTareaOffline(id, btn) {
+    if (window.OperApp) await window.OperApp.completarOffline(id, null);
+    var card = document.querySelector('[data-tarea-id="'+id+'"]');
+    if (card) {
+      card.style.opacity = '.65';
+      var t = card.querySelector('.task-title');
+      if (t) t.style.textDecoration = 'line-through';
+      var b = card.querySelector('.badge-ios');
+      if (b) { b.className='badge-ios badge-done'; b.textContent='✓ Hoy'; }
+    }
+    if (btn) { btn.disabled=true; btn.innerHTML='<i class="bi bi-clock"></i>'; btn.style.background='#FEF3C7'; btn.style.color='#92400E'; }
+    var cnt = await window.OperApp.getPendingCount();
+    document.getElementById('pending-chip').style.display = 'inline';
+    document.getElementById('pending-chip').textContent = cnt + ' pendiente(s)';
+  }
+
+  // ── Vista Detalle Tarea ───────────────────────────────────────────────────
+  async function viewDetalleTarea(id) {
+    try {
+      var res = await fetch('/api/mobile/tarea/'+id, { credentials: 'include' });
+      if (!res.ok) throw new Error();
+      var data = await res.json();
+      renderDetalle(data.tarea);
+    } catch {
+      showNoData('Detalle de tarea no disponible offline');
+    }
+  }
+
+  function renderDetalle(t) {
+    if (!t) return showNoData('Tarea no encontrada');
+    var ok = esHoy(t.fechaCompletada);
+    var archivos = t.archivos || [];
+    var fotos = archivos.filter(function(a){ return a.esImagen; });
+    var docs = archivos.filter(function(a){ return !a.esImagen; });
+
+    var html = '<div style="margin-bottom:12px;">'
+      + '<a href="/Tarea" style="color:var(--blue);font-size:14px;text-decoration:none;">'
+      + '<i class="bi bi-arrow-left me-1"></i> Mis tareas</a></div>';
+
+    html += '<div class="admin-card" style="margin-bottom:16px;">'
+      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;">'
+      +   '<div style="font-size:18px;font-weight:700;color:var(--text);">'+esc(t.titulo)+'</div>'
+      +   (ok ? '<span class="badge-ios badge-done" style="flex-shrink:0;">&#x2713; Hoy</span>'
+              : '<span class="badge-ios badge-open" style="flex-shrink:0;">Pendiente</span>')
+      + '</div>';
+
+    if (t.descripcion) html += '<p style="font-size:14px;color:var(--text2);margin-bottom:12px;">'+esc(t.descripcion)+'</p>';
+
+    html += '<div style="display:flex;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--text2);">'
+      + (t.horaProgramada ? '<span><i class="bi bi-clock me-1"></i>'+t.horaProgramada+'</span>' : '')
+      + '</div>';
+
+    if (ok) {
+      html += '<div style="margin-top:14px;padding:10px 14px;background:#E8F5E9;border-radius:12px;font-size:13px;color:#2E7D32;">'
+        + '<i class="bi bi-check-circle-fill"></i> Completada — se restablecerá mañana</div>';
+    } else if (archivos.length > 0) {
+      html += '<div id="completar-area" style="margin-top:14px;">'
+        + '<button onclick="completarDetalleOffline('+t.id+')" class="btn-primary-ios">'
+        + '<i class="bi bi-check2-circle"></i> Marcar como completada</button></div>';
+    } else {
+      html += '<div id="no-archivo-msg" style="margin-top:14px;padding:12px;background:#FEF2F2;border-radius:12px;font-size:13px;color:#DC2626;">'
+        + '<i class="bi bi-paperclip"></i> Adjunta al menos un archivo para completar</div>';
+    }
+    html += '</div>';
+
+    // Upload area
+    html += '<div class="admin-card" style="margin-bottom:16px;">'
+      + '<div style="font-weight:600;font-size:15px;margin-bottom:14px;color:var(--text);">'
+      + '<i class="bi bi-paperclip" style="color:var(--blue);"></i> Adjuntar archivos</div>'
+      + '<div id="upload-offline-preview"></div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">'
+      + btn('Cámara','bi-camera-fill','#EFF6FF','#93C5FD','#2563EB','cap-cam')
+      + btn('Galería','bi-images','#F0FDF4','#86EFAC','#16A34A','cap-gal')
+      + btn('Documento','bi-file-earmark-arrow-up','#FFF7ED','#FDC87A','#EA580C','cap-doc')
+      + '</div>'
+      + '<input type="file" id="inp-cam" accept="image/*" capture="environment" multiple style="display:none;" />'
+      + '<input type="file" id="inp-gal" accept="image/*" multiple style="display:none;" />'
+      + '<input type="file" id="inp-doc" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.png,.jpg,.jpeg" multiple style="display:none;" />'
+      + '<div id="upload-msg" style="display:none;text-align:center;padding:12px;font-size:13px;color:#E65100;">'
+      + '<i class="bi bi-clock"></i> Archivo guardado — se subirá al reconectar</div>'
+      + '</div>';
+
+    // Fotos
+    if (fotos.length > 0) {
+      html += '<div class="admin-card" style="margin-bottom:16px;">'
+        + '<div style="font-weight:600;font-size:15px;margin-bottom:12px;color:var(--text);">'
+        + '<i class="bi bi-images" style="color:var(--green);"></i> Fotos ('+fotos.length+')</div>'
+        + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
+      fotos.forEach(function(f) {
+        html += '<a href="/uploads/tareas/'+esc(f.nombreArchivo)+'" target="_blank">'
+          + '<img src="/uploads/tareas/'+esc(f.nombreArchivo)+'" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;" /></a>';
+      });
+      html += '</div></div>';
+    }
+
+    // Docs
+    if (docs.length > 0) {
+      html += '<div class="admin-card" style="margin-bottom:16px;">'
+        + '<div style="font-weight:600;font-size:15px;margin-bottom:12px;color:var(--text);">'
+        + '<i class="bi bi-file-earmark-text" style="color:var(--orange);"></i> Documentos ('+docs.length+')</div>';
+      docs.forEach(function(d) {
+        html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border-radius:10px;margin-bottom:8px;">'
+          + '<a href="/uploads/tareas/'+esc(d.nombreArchivo)+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);flex:1;min-width:0;">'
+          + '<i class="bi bi-file-earmark-pdf" style="font-size:22px;color:var(--orange);flex-shrink:0;"></i>'
+          + '<div style="min-width:0;"><div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(d.nombreOriginal)+'</div>'
+          + '<div style="font-size:11px;color:var(--text2);">'+esc(d.fechaSubida)+'</div></div></a></div>';
+      });
+      html += '</div>';
+    }
+
+    window._tareaDetalleId = t.id;
+    window._tareaDetalleArchivos = archivos.length;
+    main(html);
+
+    // Bind inputs
+    setTimeout(function() {
+      var ic = document.getElementById('inp-cam');
+      var ig = document.getElementById('inp-gal');
+      var id2 = document.getElementById('inp-doc');
+      document.getElementById('cap-cam').onclick = function(){ ic.click(); };
+      document.getElementById('cap-gal').onclick = function(){ ig.click(); };
+      document.getElementById('cap-doc').onclick = function(){ id2.click(); };
+      [ic, ig, id2].forEach(function(inp) {
+        inp.onchange = function() { handleUploadOffline(inp.files, t.id); };
+      });
+    }, 50);
+  }
+
+  function btn(label, icon, bg, border, color, id) {
+    return '<button id="'+id+'" type="button"'
+      + ' style="background:'+bg+';border:2px dashed '+border+';border-radius:14px;padding:16px 8px;'
+      + 'text-align:center;cursor:pointer;color:'+color+';font-size:12px;font-weight:600;line-height:1.4;">'
+      + '<i class="bi '+icon+'" style="font-size:24px;display:block;margin-bottom:6px;"></i>'+label+'</button>';
+  }
+
+  async function handleUploadOffline(files, tareaId) {
+    if (!files || files.length === 0) return;
+    for (var i = 0; i < files.length; i++) {
+      await window.OperApp.subirArchivoOffline(tareaId, files[i], function(id2, nombre) {
+        addPreview(nombre);
+      });
+    }
+    window._tareaDetalleArchivos++;
+    // Mostrar botón completar si aún no estaba
+    var msg = document.getElementById('no-archivo-msg');
+    if (msg) {
+      msg.style.display = 'none';
+      var area = document.getElementById('completar-area');
+      if (!area) {
+        area = document.createElement('div');
+        area.id = 'completar-area';
+        area.innerHTML = '<button onclick="completarDetalleOffline('+tareaId+')" class="btn-primary-ios" style="margin-top:14px;">'
+          + '<i class="bi bi-check2-circle"></i> Marcar como completada</button>';
+        msg.after(area);
+      }
+    }
+    document.getElementById('upload-msg').style.display = 'block';
+  }
+
+  function addPreview(nombre) {
+    var c = document.getElementById('upload-offline-preview');
+    if (!c) return;
+    var d = document.createElement('div');
+    d.style.cssText = 'font-size:12px;color:var(--text2);padding:3px 0;';
+    d.innerHTML = '<i class="bi bi-clock" style="color:#E65100;"></i> ' + esc(nombre) + ' (pendiente)';
+    c.appendChild(d);
+  }
+
+  async function completarDetalleOffline(id) {
+    if (window.OperApp) await window.OperApp.completarOffline(id, null);
+    var btn2 = document.querySelector('#completar-area button');
+    if (btn2) { btn2.disabled=true; btn2.innerHTML='<i class="bi bi-clock"></i> Pendiente de sync'; btn2.style.background='#FEF3C7'; btn2.style.color='#92400E'; }
+    var cnt = await window.OperApp.getPendingCount();
+    document.getElementById('pending-chip').style.display='inline';
+    document.getElementById('pending-chip').textContent = cnt+' pendiente(s)';
+  }
+
+  // ── Vista Historial ────────────────────────────────────────────────────────
+  async function viewHistorial() {
+    try {
+      var res = await fetch('/api/mobile/historial', { credentials: 'include' });
+      if (!res.ok) throw new Error();
+      var data = await res.json();
+      renderHistorial(data.rondas || []);
+    } catch {
+      showNoData('Sin historial guardado');
+    }
+  }
+
+  function renderHistorial(rondas) {
+    var html = '<div style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:14px;">Historial de rondas</div>';
+    if (rondas.length === 0) {
+      html += '<div style="text-align:center;padding:48px;color:var(--text2);">Sin rondas registradas</div>';
+    } else {
+      rondas.forEach(function(r) {
+        html += '<div class="admin-card" style="margin-bottom:12px;">'
+          + '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;">'+esc(r.fechaHora)+'</div>'
+          + '<div style="font-size:12px;color:var(--text2);">'
+          + (r.nombreOperador ? '<span><i class="bi bi-person me-1"></i>'+esc(r.nombreOperador)+'</span> ' : '')
+          + '<span><i class="bi bi-map me-1"></i>'+r.areasCount+' áreas</span>'
+          + (r.incidenciasCount > 0 ? ' <span style="color:var(--red);"><i class="bi bi-exclamation-triangle me-1"></i>'+r.incidenciasCount+' incidencias</span>' : '')
+          + '</div>'
+          + '<div style="margin-top:6px;"><span class="badge-ios '+(r.estado==='Completada'?'badge-done':'badge-open')+'">'+esc(r.estado)+'</span></div>'
+          + '</div>';
+      });
+    }
+    main(html);
+  }
+
+  // ── Vista genérica ────────────────────────────────────────────────────────
+  async function viewGenerico() {
+    var seccion = path.split('/').filter(Boolean).join(' / ') || 'Inicio';
+    showNoData('Sección "'+seccion+'" no disponible sin conexión');
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  window.addEventListener('online', function() {
+    document.getElementById('offline-banner').innerHTML =
+      '<span><i class="bi bi-wifi"></i> Conexión restaurada — sincronizando...</span>';
+    document.getElementById('offline-banner').style.background = '#16A34A';
+    setTimeout(function() { location.reload(); }, 2500);
+  });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Lanzar routing después de que offline.js inicialice
+    setTimeout(routeAndRender, 100);
+  });
+  </script>
+
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</body>
+</html>

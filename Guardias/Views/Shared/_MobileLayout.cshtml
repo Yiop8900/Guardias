@@ -26,6 +26,13 @@
             <div class="app-subtitle">@(User.FindFirst("EdificioNombre")?.Value ?? "Gestión de operaciones")</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
+            <!-- Botón instalar PWA — visible solo cuando Chrome lo permite -->
+            <button id="btnInstalarPWA" title="Instalar OperApp"
+                    style="display:none;background:linear-gradient(135deg,#2563EB,#7C3AED);border:none;
+                           border-radius:10px;padding:6px 10px;color:#fff;font-size:12px;
+                           font-weight:600;cursor:pointer;align-items:center;gap:4px;">
+                <i class="bi bi-download"></i> Instalar
+            </button>
             @if (User.Identity?.IsAuthenticated == true)
             {
                 <form method="post" asp-controller="Account" asp-action="Logout" style="margin:0;">
@@ -82,6 +89,39 @@
                 if (d.token) window.OperApp && window.OperApp.saveSyncKey(d.token);
             }).catch(() => {});
         }
+
+        // Escuchar confirmación de precacheo
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', function(e) {
+                if (e.data && e.data.type === 'PRECACHE_DONE') {
+                    console.log('[OperApp] Modo offline listo — todas las páginas cacheadas');
+                }
+            });
+        }
+
+        // PWA Install prompt
+        let _installPrompt = null;
+
+        window.addEventListener('beforeinstallprompt', function(e) {
+            e.preventDefault();
+            _installPrompt = e;
+            var btn = document.getElementById('btnInstalarPWA');
+            if (btn) btn.style.display = 'flex';
+        });
+
+        document.getElementById('btnInstalarPWA')?.addEventListener('click', async function() {
+            if (!_installPrompt) return;
+            _installPrompt.prompt();
+            var result = await _installPrompt.userChoice;
+            _installPrompt = null;
+            this.style.display = 'none';
+        });
+
+        window.addEventListener('appinstalled', function() {
+            var btn = document.getElementById('btnInstalarPWA');
+            if (btn) btn.style.display = 'none';
+            _installPrompt = null;
+        });
     </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

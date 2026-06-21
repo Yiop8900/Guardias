@@ -6,9 +6,7 @@
     var docs = Model.Archivos.Where(a => !a.EsImagen).ToList();
 }
 
-<div class="app-content">
-
-    @if (TempData["Success"] != null)
+@if (TempData["Success"] != null)
     {
         <div class="alert-ios alert-success" style="margin-bottom:14px;">
             <i class="bi bi-check-circle-fill me-2"></i>@TempData["Success"]
@@ -200,7 +198,6 @@
     <a href="/Tarea" style="display:block;text-align:center;color:var(--blue);font-size:14px;padding:10px;">
         <i class="bi bi-arrow-left me-1"></i> Volver a mis tareas
     </a>
-</div>
 
 <style>
     .spin { animation: spin 1s linear infinite; }
