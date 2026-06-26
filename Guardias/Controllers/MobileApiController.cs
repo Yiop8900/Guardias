@@ -7,7 +7,7 @@ using Guardias.Models;
 
 namespace Guardias.Controllers;
 
-[Authorize(Roles = "Guardia")]
+[Authorize(Roles = "Guardia,Conserje")]
 [Route("api/mobile")]
 public class MobileApiController : Controller
 {

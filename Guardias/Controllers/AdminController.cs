@@ -40,30 +40,41 @@ public class AdminController : Controller
     // ===== DASHBOARD =====
     public async Task<IActionResult> Index()
     {
-        var empresaId = GetEmpresaId();
+        var empresaId   = GetEmpresaId();
+        var edificioFijo = GetEdificioIdFijo();
+
+        var guardias   = _context.Guardias.AsQueryable();
+        var edificios  = _context.Edificios.AsQueryable();
+        var rondas     = _context.Rondas.AsQueryable();
+        var incidencias = _context.Incidencias.AsQueryable();
+        var tareas     = _context.Tareas.AsQueryable();
 
         if (empresaId.HasValue)
         {
-            ViewBag.TotalGuardias = await _context.Guardias.CountAsync(g => g.Activo && g.Edificio!.EmpresaId == empresaId.Value);
-            ViewBag.TotalEdificios = await _context.Edificios.CountAsync(e => e.Activo && e.EmpresaId == empresaId.Value);
-            ViewBag.TotalRondas = await _context.Rondas.CountAsync(r => r.Edificio!.EmpresaId == empresaId.Value);
-            ViewBag.RondasHoy = await _context.Rondas.CountAsync(r => r.FechaHora.Date == DateTime.Today && r.Edificio!.EmpresaId == empresaId.Value);
-            ViewBag.IncidenciasAbiertas = await _context.Incidencias.CountAsync(i => i.Estado == EstadoIncidencia.Abierta && i.Ronda!.Edificio!.EmpresaId == empresaId.Value);
-            ViewBag.TareasPendientes = await _context.Tareas.CountAsync(t => t.Estado == EstadoTarea.Pendiente && t.Edificio!.EmpresaId == empresaId.Value);
-            ViewBag.RondasPendientesFirma = await _context.Rondas.CountAsync(r => r.Estado == EstadoRonda.Finalizada && r.Edificio!.EmpresaId == empresaId.Value);
-        }
-        else
-        {
-            ViewBag.TotalGuardias = await _context.Guardias.CountAsync(g => g.Activo);
-            ViewBag.TotalEdificios = await _context.Edificios.CountAsync(e => e.Activo);
-            ViewBag.TotalRondas = await _context.Rondas.CountAsync();
-            ViewBag.RondasHoy = await _context.Rondas.CountAsync(r => r.FechaHora.Date == DateTime.Today);
-            ViewBag.IncidenciasAbiertas = await _context.Incidencias.CountAsync(i => i.Estado == EstadoIncidencia.Abierta);
-            ViewBag.TareasPendientes = await _context.Tareas.CountAsync(t => t.Estado == EstadoTarea.Pendiente);
-            ViewBag.RondasPendientesFirma = await _context.Rondas.CountAsync(r => r.Estado == EstadoRonda.Finalizada);
+            guardias    = guardias.Where(g => g.Edificio!.EmpresaId == empresaId.Value);
+            edificios   = edificios.Where(e => e.EmpresaId == empresaId.Value);
+            rondas      = rondas.Where(r => r.Edificio!.EmpresaId == empresaId.Value);
+            incidencias = incidencias.Where(i => i.Ronda!.Edificio!.EmpresaId == empresaId.Value);
+            tareas      = tareas.Where(t => t.Edificio!.EmpresaId == empresaId.Value);
         }
 
-        ViewBag.EmpresaId = empresaId;
+        // Mayordomo: restringir a su edificio
+        if (edificioFijo.HasValue)
+        {
+            guardias    = guardias.Where(g => g.EdificioId == edificioFijo.Value);
+            edificios   = edificios.Where(e => e.Id == edificioFijo.Value);
+            rondas      = rondas.Where(r => r.EdificioId == edificioFijo.Value);
+            incidencias = incidencias.Where(i => i.Ronda!.EdificioId == edificioFijo.Value);
+            tareas      = tareas.Where(t => t.EdificioId == edificioFijo.Value);
+        }
+
+        ViewBag.TotalGuardias        = await guardias.CountAsync(g => g.Activo);
+        ViewBag.TotalEdificios       = await edificios.CountAsync(e => e.Activo);
+        ViewBag.RondasHoy            = await rondas.CountAsync(r => r.FechaHora.Date == DateTime.Today);
+        ViewBag.IncidenciasAbiertas  = await incidencias.CountAsync(i => i.Estado == EstadoIncidencia.Abierta);
+        ViewBag.TareasPendientes     = await tareas.CountAsync(t => t.Estado == EstadoTarea.Pendiente);
+        ViewBag.RondasPendientesFirma = await rondas.CountAsync(r => r.Estado == EstadoRonda.Finalizada);
+        ViewBag.EmpresaId            = empresaId;
         return View();
     }
 
@@ -599,7 +610,8 @@ public class AdminController : Controller
 
     public async Task<IActionResult> DetalleTarea(int id)
     {
-        var empresaId = GetEmpresaId();
+        var empresaId    = GetEmpresaId();
+        var edificioFijo = GetEdificioIdFijo();
         var query = _context.Tareas
             .Include(t => t.Guardia)
             .Include(t => t.Edificio)
@@ -608,6 +620,8 @@ public class AdminController : Controller
 
         if (empresaId.HasValue)
             query = query.Where(t => t.Edificio!.EmpresaId == empresaId.Value);
+        if (edificioFijo.HasValue)
+            query = query.Where(t => t.EdificioId == edificioFijo.Value);
 
         var tarea = await query.FirstOrDefaultAsync(t => t.Id == id);
         if (tarea == null) return NotFound();
@@ -644,38 +658,21 @@ public class AdminController : Controller
 
     public async Task<IActionResult> DetalleRonda(int id)
     {
-        var ronda = await _context.Rondas
-            .Include(r => r.Guardia)
-            .Include(r => r.Edificio)
-            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Area)
-            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Fotos)
-            .Include(r => r.Incidencias)
-            .FirstOrDefaultAsync(r => r.Id == id);
+        var ronda = await GetRondaRestringida(id);
         if (ronda == null) return NotFound();
         return View(ronda);
     }
 
     public async Task<IActionResult> ExportarPdfRonda(int id)
     {
-        var ronda = await _context.Rondas
-            .Include(r => r.Guardia)
-            .Include(r => r.Edificio)
-            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Area)
-            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Fotos)
-            .Include(r => r.Incidencias)
-            .FirstOrDefaultAsync(r => r.Id == id);
+        var ronda = await GetRondaRestringida(id);
         if (ronda == null) return NotFound();
         return View(ronda);
     }
 
     public async Task<IActionResult> FirmarRonda(int id)
     {
-        var ronda = await _context.Rondas
-            .Include(r => r.Guardia)
-            .Include(r => r.Edificio)
-            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Area)
-            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Fotos)
-            .FirstOrDefaultAsync(r => r.Id == id);
+        var ronda = await GetRondaRestringida(id);
         if (ronda == null) return NotFound();
         return View(ronda);
     }
@@ -684,7 +681,7 @@ public class AdminController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> FirmarRonda(int id, string firmadoPor)
     {
-        var ronda = await _context.Rondas.FindAsync(id);
+        var ronda = await GetRondaRestringida(id, soloId: true);
         if (ronda == null) return NotFound();
 
         if (string.IsNullOrWhiteSpace(firmadoPor))
@@ -738,24 +735,14 @@ public class AdminController : Controller
 
     public async Task<IActionResult> GestionarIncidencia(int id)
     {
-        var incidencia = await _context.Incidencias
-            .Include(i => i.Ronda)
-                .ThenInclude(r => r!.Guardia)
-            .Include(i => i.Ronda)
-                .ThenInclude(r => r!.Edificio)
-            .FirstOrDefaultAsync(i => i.Id == id);
+        var incidencia = await GetIncidenciaRestringida(id);
         if (incidencia == null) return NotFound();
         return View(incidencia);
     }
 
     public async Task<IActionResult> ExportarPdfIncidencia(int id)
     {
-        var incidencia = await _context.Incidencias
-            .Include(i => i.Ronda).ThenInclude(r => r!.Guardia)
-            .Include(i => i.Ronda).ThenInclude(r => r!.Edificio)
-            .Include(i => i.Ronda).ThenInclude(r => r!.AreaRondas).ThenInclude(ar => ar.Area)
-            .Include(i => i.Ronda).ThenInclude(r => r!.AreaRondas).ThenInclude(ar => ar.Fotos)
-            .FirstOrDefaultAsync(i => i.Id == id);
+        var incidencia = await GetIncidenciaRestringida(id, conAreas: true);
         if (incidencia == null) return NotFound();
         return View("~/Views/Incidencia/ExportarPdf.cshtml", incidencia);
     }
@@ -764,7 +751,10 @@ public class AdminController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> GestionarIncidencia(int id, EstadoIncidencia estado, SeveridadIncidencia severidad, string? notasCierre)
     {
-        var incidencia = await _context.Incidencias.FindAsync(id);
+        var edificioFijo = GetEdificioIdFijo();
+        var query = _context.Incidencias.AsQueryable();
+        if (edificioFijo.HasValue) query = query.Where(i => i.Ronda!.EdificioId == edificioFijo.Value);
+        var incidencia = await query.FirstOrDefaultAsync(i => i.Id == id);
         if (incidencia == null) return NotFound();
 
         incidencia.Estado = estado;
@@ -780,6 +770,44 @@ public class AdminController : Controller
     }
 
     // ===== HELPERS =====
+
+    private async Task<Ronda?> GetRondaRestringida(int id, bool soloId = false)
+    {
+        var edificioFijo = GetEdificioIdFijo();
+        var query = _context.Rondas.AsQueryable();
+        if (edificioFijo.HasValue)
+            query = query.Where(r => r.EdificioId == edificioFijo.Value);
+
+        if (soloId) return await query.FirstOrDefaultAsync(r => r.Id == id);
+
+        return await query
+            .Include(r => r.Guardia)
+            .Include(r => r.Edificio)
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Area)
+            .Include(r => r.AreaRondas).ThenInclude(ar => ar.Fotos)
+            .Include(r => r.Incidencias)
+            .FirstOrDefaultAsync(r => r.Id == id);
+    }
+
+    private async Task<Incidencia?> GetIncidenciaRestringida(int id, bool conAreas = false)
+    {
+        var edificioFijo = GetEdificioIdFijo();
+        var query = _context.Incidencias
+            .Include(i => i.Ronda).ThenInclude(r => r!.Guardia)
+            .Include(i => i.Ronda).ThenInclude(r => r!.Edificio)
+            .AsQueryable();
+
+        if (conAreas)
+            query = query
+                .Include(i => i.Ronda).ThenInclude(r => r!.AreaRondas).ThenInclude(ar => ar.Area)
+                .Include(i => i.Ronda).ThenInclude(r => r!.AreaRondas).ThenInclude(ar => ar.Fotos);
+
+        if (edificioFijo.HasValue)
+            query = query.Where(i => i.Ronda!.EdificioId == edificioFijo.Value);
+
+        return await query.FirstOrDefaultAsync(i => i.Id == id);
+    }
+
     private async Task LoadEdificiosViewBag()
     {
         var empresaId = GetEmpresaId();

@@ -7,7 +7,7 @@ using Guardias.Models;
 
 namespace Guardias.Controllers;
 
-[Authorize(Roles = "Guardia")]
+[Authorize(Roles = "Guardia,Conserje")]
 public class PendientesController : Controller
 {
     private readonly AppDbContext _context;

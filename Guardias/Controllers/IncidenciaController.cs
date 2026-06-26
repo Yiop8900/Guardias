@@ -8,7 +8,7 @@ using Guardias.Services;
 
 namespace Guardias.Controllers;
 
-[Authorize(Roles = "Guardia,Admin")]
+[Authorize(Roles = "Guardia,Conserje,Admin")]
 public class IncidenciaController : Controller
 {
     private readonly AppDbContext _context;
@@ -77,7 +77,7 @@ public class IncidenciaController : Controller
     }
 
     // GET: /Incidencia/Reportar
-    [Authorize(Roles = "Guardia")]
+    [Authorize(Roles = "Guardia,Conserje")]
     public async Task<IActionResult> Reportar()
     {
         int edificioId = GetEdificioId();
@@ -93,7 +93,7 @@ public class IncidenciaController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(52_428_800)]
-    [Authorize(Roles = "Guardia")]
+    [Authorize(Roles = "Guardia,Conserje")]
     public async Task<IActionResult> Reportar(int areaId, string descripcion,
         SeveridadIncidencia severidad, List<IFormFile> fotos)
     {
@@ -201,7 +201,7 @@ public class IncidenciaController : Controller
     }
 
     // GET: /Incidencia/ExportarPdf/5
-    [Authorize(Roles = "Guardia,Admin")]
+    [Authorize(Roles = "Guardia,Conserje,Admin")]
     public async Task<IActionResult> ExportarPdf(int id)
     {
         IQueryable<Incidencia> query = _context.Incidencias

@@ -8,7 +8,7 @@ using Guardias.Services;
 
 namespace Guardias.Controllers;
 
-[Authorize(Roles = "Guardia")]
+[Authorize(Roles = "Guardia,Conserje")]
 public class RondaController : Controller
 {
     private readonly AppDbContext _context;
